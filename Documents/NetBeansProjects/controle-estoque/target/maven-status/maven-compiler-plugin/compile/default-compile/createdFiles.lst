@@ -1,0 +1,6 @@
+br\com\joao_pedro\controle\estoque\dao\ProdutoDao.class
+br\com\joao_pedro\controle\estoque\dao\MovimentacaoDAO.class
+br\com\joao_pedro\controle\estoque\ControleEstoque.class
+br\com\joao_pedro\controle\estoque\model\Movimentacao.class
+br\com\joao_pedro\controle\estoque\model\Produto.class
+br\com\joao_pedro\controle\estoque\util\ConnectionFactory.class
