@@ -22,6 +22,22 @@ de ponta a ponta — tudo via código, de forma reproduzível.
 Essas skills ficam em `.claude/skills/`, então qualquer sessão do Claude Code aberta neste
 repositório já as carrega automaticamente.
 
+### Motion — o editor que conversa
+
+Além das skills de edição, existe o agente **Motion** (`.claude/agents/motion.md`): um diretor
+criativo que **conversa** com você — faz briefing, propõe 2–3 direções criativas, mostra
+storyboard, explica as escolhas, dá crítica sincera de vídeos, ensina técnicas e traduz feedback
+vago ("mais dinâmico", "mais elegante") em ajustes concretos.
+
+Ele usa duas rotas de produção:
+
+| Rota | Quando usar |
+|------|-------------|
+| **Conector Motion** (`create_video` / `create_followup`) | Vídeo completo a partir de um briefing, URL ou documento: lançamentos, anúncios, explicativos, demos. Templates: Feature Showcase, Launch Buzz, Message Stories, App Launch. Consome créditos (sempre com confirmação). |
+| **Skills (Remotion + FFmpeg)** | Editar material bruto, precisão de frame, componentes próprios, finalização de cor/áudio/legenda e exportação. |
+
+Para usar: peça "use o agente motion" ou simplesmente converse sobre o vídeo que você quer.
+
 ---
 
 ## 2. Stack de ferramentas
