@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reel Diart</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&display=block" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #11151c; }
+  body { display: grid; place-items: center; overflow: hidden; }
+  canvas {
+    display: block;
+    width: min(100vw, 56.25vh);
+    height: min(100vh, 177.78vw);
+    background: #EDF1F7;
+  }
+  .ui {
+    position: fixed; right: 12px; bottom: 12px;
+    font: 500 12px/1 system-ui, sans-serif; letter-spacing: .02em;
+    padding: 7px 11px; border-radius: 999px;
+    background: rgba(14, 22, 38, .55); color: #fff;
+    opacity: .55; cursor: pointer; user-select: none;
+    transition: opacity .2s;
+  }
+  .ui:hover, .ui:focus-within { opacity: 1; }
+  html.render body { background: #EDF1F7; }
+  html.render .ui { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<label class="ui" id="escolher">Escolher imagem<input type="file" accept="image/*" hidden></label>
+
+<!-- Usado só quando a imagem não pode ser lida pixel a pixel (página aberta via file://) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="lumAlfa" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0.85 2.86 0.29 0 -2"/>
+  </filter>
+</svg>
+
+<script>
+(() => {
+  // ---------- Configuração ----------
+  const W = 1080, H = 1920, T = 4, FPS = 24;
+  const CENTRO_X = 540, CENTRO_Y = 720;          // centro da área útil (rodapé livre: y > 1440)
+  const PROF = 34;                               // espessura (px) da lateral
+  const C30 = Math.cos(Math.PI / 6), S30 = 0.5;  // parede isométrica a 30°
+  const AZUL = { face: '#4C7DF0', lado: '#2A4BA6', linha: 'rgba(255,255,255,.85)' };
+  const AMARELO = { face: '#FFB547', lado: '#0E1626', linha: 'rgba(255,244,222,.95)' };
+  const FONTE = '"Space Grotesk", "Arial Black", sans-serif';
+  const LEGENDA = ['CONSERTANDO', 'SEU PROBLEMA', 'ELETRÔNICO'];
+
+  const RENDER = new URLSearchParams(location.search).get('render') === '1';
+  if (RENDER) document.documentElement.classList.add('render');
+
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const tela = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };
+  const camada = tela(W, H), lctx = camada.getContext('2d');
+  const mistura = tela(W, H), mctx = mistura.getContext('2d');
+  const canal = tela(W, H), cctx = canal.getContext('2d');
+
+  const pecas = { logo: null, troca: null, legenda: null };
+
+  // ---------- Utilidades ----------
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, p) => a + (b - a) * p;
+  const voltaDoPonto = (p, s = 1.7) => { const q = p - 1; return 1 + (s + 1) * q * q * q + s * q * q; };
+  const entraAcelera = p => p * p * p;
+  function rnd(a, b) {
+    let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be5ab, 0xc2b2ae35);
+    h ^= h >>> 13; h = Math.imul(h, 0x27d4eb2f); h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  }
+
+  // ---------- Máscaras ----------
+  function recortar(mask, folga = 2) {
+    const x = mask.getContext('2d', { willReadFrequently: true });
+    const d = x.getImageData(0, 0, mask.width, mask.height).data;
+    let x0 = mask.width, y0 = mask.height, x1 = -1, y1 = -1;
+    for (let y = 0; y < mask.height; y++) for (let i = 0; i < mask.width; i++) {
+      if (d[(y * mask.width + i) * 4 + 3] > 127) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    if (x1 < 0) return mask;
+    x0 = Math.max(0, x0 - folga); y0 = Math.max(0, y0 - folga);
+    x1 = Math.min(mask.width - 1, x1 + folga); y1 = Math.min(mask.height - 1, y1 + folga);
+    const c = tela(x1 - x0 + 1, y1 - y0 + 1);
+    c.getContext('2d').drawImage(mask, -x0, -y0);
+    return c;
+  }
+
+  function mascaraTexto(linhas, entrelinha = 1.0) {
+    const medir = tela(10, 10).getContext('2d');
+    let larg = 0, alt = 0;
+    for (const l of linhas) { medir.font = `700 ${l.tam}px ${FONTE}`; larg = Math.max(larg, medir.measureText(l.t).width); alt += l.tam * entrelinha; }
+    const c = tela(larg + 80, alt + 200), x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+    let y = 100;
+    for (const l of linhas) { x.font = `700 ${l.tam}px ${FONTE}`; y += l.tam * entrelinha; x.fillText(l.t, c.width / 2, y - l.tam * 0.18); }
+    return recortar(c);
+  }
+
+  // Transforma a imagem escolhida em máscara (forma clara/escura detectada sozinha).
+  function mascaraDaImagem(img, largAlvo = 1100) {
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    const k = Math.min(1, 1600 / Math.max(iw, ih));
+    const w = Math.round(iw * k), h = Math.round(ih * k);
+    const base = tela(w, h), bx = base.getContext('2d', { willReadFrequently: true });
+    bx.drawImage(img, 0, 0, w, h);
+    let dados;
+    try { dados = bx.getImageData(0, 0, w, h); } catch (e) { return mascaraPorFiltro(img, largAlvo); }
+    const d = dados.data, n = w * h;
+
+    // Borda: decide se o fundo é transparente, escuro ou claro.
+    let somaL = 0, somaA = 0, nb = 0;
+    const lum = i => 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    const borda = (px, py) => { const i = (py * w + px) * 4; somaL += lum(i); somaA += d[i + 3]; nb++; };
+    for (let i = 0; i < w; i++) { borda(i, 0); borda(i, h - 1); }
+    for (let j = 0; j < h; j++) { borda(0, j); borda(w - 1, j); }
+    const porAlfa = somaA / nb < 128;
+    const fundoClaro = somaL / nb > 128;
+
+    const v = new Uint8ClampedArray(n);
+    for (let p = 0; p < n; p++) {
+      const i = p * 4, a = d[i + 3] / 255;
+      if (porAlfa) v[p] = d[i + 3];
+      else { const l = lum(i) * a + (fundoClaro ? 255 : 0) * (1 - a); v[p] = fundoClaro ? 255 - l : l; }
+    }
+    // Limiar de Otsu
+    let limiar = 128;
+    if (!porAlfa) {
+      const hist = new Float64Array(256); for (let p = 0; p < n; p++) hist[v[p]]++;
+      let soma = 0; for (let i = 0; i < 256; i++) soma += i * hist[i];
+      let sB = 0, wB = 0, melhor = -1;
+      for (let i = 0; i < 256; i++) {
+        wB += hist[i]; if (!wB) continue; const wF = n - wB; if (!wF) break;
+        sB += i * hist[i]; const mB = sB / wB, mF = (soma - sB) / wF;
+        const entre = wB * wF * (mB - mF) * (mB - mF);
+        if (entre > melhor) { melhor = entre; limiar = i; }
+      }
+    }
+    // Caixa da forma (ignora pontinhos soltos)
+    const lin = new Uint32Array(h), col = new Uint32Array(w);
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (v[j * w + i] > limiar) { lin[j]++; col[i]++; }
+    let x0 = 0, x1 = w - 1, y0 = 0, y1 = h - 1;
+    while (x0 < x1 && col[x0] < 3) x0++; while (x1 > x0 && col[x1] < 3) x1--;
+    while (y0 < y1 && lin[y0] < 3) y0++; while (y1 > y0 && lin[y1] < 3) y1--;
+    x0 = Math.max(0, x0 - 2); y0 = Math.max(0, y0 - 2); x1 = Math.min(w - 1, x1 + 2); y1 = Math.min(h - 1, y1 + 2);
+
+    // Valor linear em alfa → amplia → limiar de novo (bordas nítidas na ampliação)
+    const lin8 = new ImageData(w, h);
+    for (let p = 0; p < n; p++) { const i = p * 4; lin8.data[i] = lin8.data[i + 1] = lin8.data[i + 2] = 255; lin8.data[i + 3] = v[p]; }
+    bx.putImageData(lin8, 0, 0);
+    const cw = x1 - x0 + 1, ch = y1 - y0 + 1, esc = largAlvo / cw;
+    const out = tela(largAlvo, ch * esc), ox = out.getContext('2d', { willReadFrequently: true });
+    ox.imageSmoothingQuality = 'high';
+    ox.drawImage(base, x0, y0, cw, ch, 0, 0, out.width, out.height);
+    const od = ox.getImageData(0, 0, out.width, out.height);
+    for (let i = 3; i < od.data.length; i += 4) od.data[i] = 255 * clamp((od.data[i] - limiar) / 28 + 0.5);
+    ox.putImageData(od, 0, 0);
+    return out;
+  }
+
+  function mascaraPorFiltro(img, largAlvo) {
+    const esc = largAlvo / img.naturalWidth;
+    const c = tela(largAlvo, img.naturalHeight * esc), x = c.getContext('2d');
+    x.filter = 'url(#lumAlfa)';
+    x.drawImage(img, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  function pintar(mask, cor) {
+    const c = tela(mask.width, mask.height), x = c.getContext('2d');
+    x.drawImage(mask, 0, 0, c.width, c.height);
+    x.globalCompositeOperation = 'source-in'; x.fillStyle = cor; x.fillRect(0, 0, c.width, c.height);
+    return c;
+  }
+  function erodir(mask, r) {
+    const c = tela(mask.width, mask.height), x = c.getContext('2d');
+    x.drawImage(mask, 0, 0);
+    x.globalCompositeOperation = 'destination-in';
+    const q = r * 0.7071;
+    for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r], [q, q], [-q, q], [q, -q], [-q, -q]]) x.drawImage(mask, dx, dy);
+    return c;
+  }
+
+  // Peça isométrica: face + lateral deslocada para trás/cima + linha clara na borda.
+  function construir(mask, cores, largTela, altMax = 1080) {
+    const ar = mask.height / mask.width;
+    const Wf = Math.min(largTela / C30 - PROF, (altMax - PROF * S30) / (ar + S30));
+    const Hf = Wf * ar;
+    const m = tela(Wf, Hf); m.getContext('2d').drawImage(mask, 0, 0, m.width, m.height);
+    const face = pintar(m, cores.face), lado = pintar(m, cores.lado);
+    const linha = pintar(m, cores.linha);
+    const lx = linha.getContext('2d'); lx.globalCompositeOperation = 'destination-out'; lx.drawImage(erodir(m, 2.6), 0, 0);
+
+    const pad = 4, ox = pad + PROF * C30, oy = pad + (Wf + PROF) * S30;
+    const c = tela(2 * pad + (PROF + Wf) * C30, 2 * pad + (PROF + Wf) * S30 + Hf), x = c.getContext('2d');
+    for (let i = PROF; i >= 1; i--) { x.setTransform(C30, -S30, 0, 1, ox - i * C30, oy - i * S30); x.drawImage(lado, 0, 0); }
+    x.setTransform(C30, -S30, 0, 1, ox, oy);
+    x.drawImage(face, 0, 0);
+    x.drawImage(linha, 0, 0);
+    return { c, ax: ox + Wf / 2 * C30, ay: oy + Hf / 2 - Wf / 2 * S30, Wf, Hf };
+  }
+  // desenha com o centro (plano) da peça em (cx, cy)
+  const desenhar = (x, p, cx, cy, s) => x.drawImage(p.c, cx - p.ax * s, cy - p.ay * s, p.c.width * s, p.c.height * s);
+
+  // ---------- Fundo: grade isométrica que desliza ----------
+  function fundo(t) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#EDF1F7'; ctx.fillRect(0, 0, W, H);
+    const a = 96, off = (t / T) * a, tg = Math.tan(Math.PI / 6);
+    ctx.strokeStyle = 'rgba(42,75,166,.055)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    const kMin = Math.floor(-W * tg / a) - 2, kMax = Math.ceil((H + W * tg) / a) + 2;
+    for (let k = kMin; k <= kMax; k++) {
+      const y = k * a + off;
+      ctx.moveTo(0, y); ctx.lineTo(W, y - W * tg);           // sobe para a direita
+      ctx.moveTo(0, y - W * tg); ctx.lineTo(W, y);            // desce para a direita
+    }
+    for (let x = 0; x <= W + 1; x += a * C30) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+    ctx.stroke();
+  }
+
+  // ---------- Linha do tempo ----------
+  function forcaFalha(t, q) {
+    if (t < 0.55) { const passo = Math.floor(t / 0.55 * 5); return (1 - passo / 5) * (0.82 + 0.18 * rnd(q, 1)); }
+    for (const [c, pico] of [[1.55, 0.62], [2.6, 0.55]]) if (t >= c - 0.085 && t < c + 0.125) return pico * (0.55 + 0.45 * rnd(q, 2));
+    return 0;
+  }
+
+  function conteudo(t, q) {
+    const deriva = 0.995 + 0.035 * Math.sin(2 * Math.PI * t / T);   // 0,96 → 1,03
+    lctx.setTransform(1, 0, 0, 1, 0, 0);
+    lctx.globalAlpha = 1;
+    lctx.clearRect(0, 0, W, H);
+    let s = deriva, alfa = 1;
+    const { logo, troca, legenda } = pecas;
+    const lista = [];
+    if (t < 1.55) {
+      s *= lerp(0.86, 1, voltaDoPonto(clamp(t / 0.5)));
+      const trocar = t < 0.22 && (q === 2 || rnd(q, 7) < 0.3);
+      lista.push([trocar ? troca : logo, 0, 1]);
+    } else if (t < 2.6) {
+      s *= lerp(0.9, 1, voltaDoPonto(clamp((t - 1.55) / 0.45)));
+      lista.push([legenda, 0, 1]);
+    } else {
+      s *= lerp(0.9, 1, voltaDoPonto(clamp((t - 2.6) / 0.5)));
+      if (t > 3.55) { const e = entraAcelera(clamp((t - 3.55) / 0.45)); alfa = 1 - e; s *= 1 - 0.12 * e; }
+      const sl = Math.min(0.72, 440 / logo.Hf), sg = 0.6;
+      const hl = logo.Hf * sl, hg = legenda.Hf * sg, gap = 56, tot = hl + gap + hg;
+      lista.push([logo, -tot / 2 + hl / 2, sl], [legenda, tot / 2 - hg / 2, sg]);
+    }
+    lctx.globalAlpha = alfa;
+    lctx.setTransform(s, 0, 0, s, CENTRO_X * (1 - s), CENTRO_Y * (1 - s));
+    for (const [p, dy, e] of lista) desenhar(lctx, p, CENTRO_X, CENTRO_Y + dy, e);
+    lctx.setTransform(1, 0, 0, 1, 0, 0); lctx.globalAlpha = 1;
+  }
+
+  function falha(g, t, q) {
+    // canais separados: vermelho para um lado, azul para o outro
+    const dx = Math.round(16 * g * (0.65 + 0.35 * rnd(q, 3)));
+    mctx.globalCompositeOperation = 'source-over';
+    mctx.clearRect(0, 0, W, H);
+    for (const [cor, o] of [['#f00', -dx], ['#0f0', 0], ['#00f', dx]]) {
+      cctx.globalCompositeOperation = 'source-over'; cctx.clearRect(0, 0, W, H);
+      cctx.drawImage(camada, 0, 0);
+      cctx.globalCompositeOperation = 'multiply'; cctx.fillStyle = cor; cctx.fillRect(0, 0, W, H);
+      cctx.globalCompositeOperation = 'destination-in'; cctx.drawImage(camada, 0, 0);
+      mctx.globalCompositeOperation = 'lighter'; mctx.drawImage(canal, o, 0);
+    }
+    mctx.globalCompositeOperation = 'source-over';
+    // fatias horizontais deslocadas
+    let y = 0, i = 0;
+    while (y < H) {
+      const h = Math.min(H - y, Math.round(18 + rnd(q, 10 + i) * 150));
+      let o = 0;
+      if (rnd(q, 200 + i) < 0.6) o = Math.round((rnd(q, 400 + i) * 2 - 1) * 160 * g);
+      const some = t < 0.3 && rnd(q, 600 + i) < 0.25 * g;
+      if (!some) ctx.drawImage(mistura, 0, y, W, h, o, y, W, h);
+      y += h; i++;
+    }
+  }
+
+  function irPara(t) {
+    t = ((t % T) + T) % T;
+    fundo(t);
+    if (!pecas.logo || !pecas.legenda) return;
+    const q = Math.floor(t * FPS + 1e-6);
+    conteudo(t, q);
+    const g = forcaFalha(t, q);
+    if (g > 0.001) falha(g, t, q);
+    else ctx.drawImage(camada, 0, 0);
+  }
+
+  const cena = window.cena = { duracao: T, fps: FPS, pronto: false, irPara };
+
+  // ---------- Carregamento ----------
+  const carregar = src => new Promise((ok, erro) => { const i = new Image(); i.onload = () => ok(i); i.onerror = erro; i.src = src; });
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  let ultimoT = 0;
+
+  function usarLogo(img) {
+    const mask = img ? mascaraDaImagem(img) : mascaraTexto([{ t: 'DIART', tam: 300 }, { t: 'informática', tam: 112 }], 1.02);
+    pecas.logo = construir(mask, AZUL, 880);
+  }
+
+  async function iniciar() {
+    if (document.readyState !== 'complete') await new Promise(r => addEventListener('load', r, { once: true }));
+    try { await Promise.race([document.fonts.load(`700 150px ${FONTE}`), espera(4000)]); } catch (e) {}
+    pecas.legenda = construir(mascaraTexto(LEGENDA.map(t => ({ t, tam: 150 }))), AMARELO, 880);
+    pecas.troca = construir(mascaraTexto([{ t: 'D1ART', tam: 300 }, { t: '1nf0rm4t1c4', tam: 112 }], 1.02), AMARELO, 880);
+    usarLogo(await carregar('logo.png').catch(() => null));
+    cena.pronto = true;
+    irPara(ultimoT);
+  }
+
+  document.querySelector('#escolher input').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    try { usarLogo(await carregar(url)); } catch (err) { alert('Não foi possível abrir essa imagem.'); }
+    URL.revokeObjectURL(url);
+  });
+
+  irPara(0);
+  iniciar();
+
+  if (!RENDER) {
+    const t0 = performance.now();
+    const tick = agora => { ultimoT = ((agora - t0) / 1000) % T; irPara(ultimoT); requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }
+})();
+</script>
+</body>
+</html>
