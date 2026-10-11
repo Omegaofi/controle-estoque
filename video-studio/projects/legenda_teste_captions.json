@@ -1,0 +1,117 @@
+{
+  "language": null,
+  "source": "srt:legenda_teste.srt",
+  "segments": [
+    {
+      "start": 0.3,
+      "end": 2.6,
+      "text": "[LEGENDA DE TESTE] sincronização",
+      "words": [
+        {
+          "start": 0.3,
+          "end": 0.927,
+          "word": "[LEGENDA"
+        },
+        {
+          "start": 0.927,
+          "end": 1.136,
+          "word": "DE"
+        },
+        {
+          "start": 1.136,
+          "end": 1.624,
+          "word": "TESTE]"
+        },
+        {
+          "start": 1.624,
+          "end": 2.6,
+          "word": "sincronização"
+        }
+      ]
+    },
+    {
+      "start": 2.8,
+      "end": 5.5,
+      "text": "texto fictício para validar o estilo karaokê",
+      "words": [
+        {
+          "start": 2.8,
+          "end": 3.16,
+          "word": "texto"
+        },
+        {
+          "start": 3.16,
+          "end": 3.7,
+          "word": "fictício"
+        },
+        {
+          "start": 3.7,
+          "end": 4.0,
+          "word": "para"
+        },
+        {
+          "start": 4.0,
+          "end": 4.48,
+          "word": "validar"
+        },
+        {
+          "start": 4.48,
+          "end": 4.6,
+          "word": "o"
+        },
+        {
+          "start": 4.6,
+          "end": 5.02,
+          "word": "estilo"
+        },
+        {
+          "start": 5.02,
+          "end": 5.5,
+          "word": "karaokê"
+        }
+      ]
+    },
+    {
+      "start": 6.0,
+      "end": 9.0,
+      "text": "não é a transcrição real da fala",
+      "words": [
+        {
+          "start": 6.0,
+          "end": 6.364,
+          "word": "não"
+        },
+        {
+          "start": 6.364,
+          "end": 6.545,
+          "word": "é"
+        },
+        {
+          "start": 6.545,
+          "end": 6.727,
+          "word": "a"
+        },
+        {
+          "start": 6.727,
+          "end": 7.818,
+          "word": "transcrição"
+        },
+        {
+          "start": 7.818,
+          "end": 8.273,
+          "word": "real"
+        },
+        {
+          "start": 8.273,
+          "end": 8.545,
+          "word": "da"
+        },
+        {
+          "start": 8.545,
+          "end": 9.0,
+          "word": "fala"
+        }
+      ]
+    }
+  ]
+}

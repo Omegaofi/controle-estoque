@@ -1,0 +1,6 @@
+# Dependências diretas do video-studio (versões testadas em 2026-10-11).
+# A lista completa e fixada está em requirements.lock.txt.
+auto-editor==29.3.1        # Unlicense  - remoção de silêncios / export para editores
+scenedetect==0.7.1         # BSD-3      - detecção de cenas (traz opencv-python)
+moviepy==2.2.1             # MIT        - composição/animação em Python
+faster-whisper==1.2.1      # MIT        - transcrição local (CTranslate2, CPU)

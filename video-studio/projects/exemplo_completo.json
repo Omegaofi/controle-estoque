@@ -1,0 +1,23 @@
+{
+  "output": "output/exemplo_completo_1080p.mp4",
+  "resolution": [1920, 1080],
+  "fps": 30,
+  "fit": "pad",
+  "theme": {"accent": "#FFD400", "primary": "#FFFFFF"},
+  "transition": {"type": "fade", "duration": 0.5},
+  "captions": {"style": "karaoke"},
+  "clips": [
+    {"file": "assets/graphics/intro.mp4", "transition": {"type": "fadeblack", "duration": 0.6}},
+    {"file": "output/exemplo-fala/exemplo-fala_cut.mp4",
+     "captions": "projects/legenda_teste_captions.json",
+     "overlays": [{"type": "lower_third", "start": 1.0, "end": 5.5, "name": "Apresentador", "role": "Vídeo de exemplo do auto-editor"}],
+     "transition": {"type": "slideleft", "duration": 0.6}},
+    {"file": "input/teste-broll-vertical.mp4", "in": 0, "out": 6, "fit": "blur", "mute": true,
+     "overlays": [{"type": "callout", "start": 0.5, "end": 3.0, "text": "Vertical → 16:9 com fundo desfocado"}],
+     "transition": {"type": "circleopen", "duration": 0.6}},
+    {"title": "Obrigado!", "subtitle": "feito com FFmpeg + auto-editor + PySceneDetect + MoviePy", "duration": 3, "color": "#0B0F14", "color2": "#1C2A3A"}
+  ],
+  "music": {"file": "assets/music/trilha-teste.m4a", "volume": 0.3, "duck": true, "fade_in": 1.0, "fade_out": 2.0},
+  "logo": {"file": "assets/graphics/logo-teste.png", "position": "top-right", "width": 200, "opacity": 0.85},
+  "loudness": -14
+}

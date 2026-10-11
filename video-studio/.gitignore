@@ -1,0 +1,11 @@
+.venv/
+models/
+tools/repos/
+__pycache__/
+input/*
+output/*
+assets/music/*
+assets/graphics/*
+assets/fonts/*
+!**/.gitkeep
+projects/auto_*.json
