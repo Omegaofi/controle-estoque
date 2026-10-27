@@ -781,7 +781,10 @@ export function buildKnight(THREE, options = {}) {
   // Lado da espada: -1 = mão direita. O escudo fica no outro braço.
   const SWORD = -1, SHIELD = -SWORD;
   // Braço da espada caído ao lado; braço do escudo com o antebraço à frente.
-  const swordArm = arm(SWORD, [-0.05, 0, 0.1 * SWORD], [-0.22, 0, 0], [0, 0, 0]);
+  // Braço da espada flexionado: antebraço à frente e para baixo, mão à frente
+  // do quadril, para a lâmina apontar para a frente longe do corpo.
+  const swordPose = options.swordPose ?? { shoulder: [-0.1, 0, 0.12], elbow: -0.9 };
+  const swordArm = arm(SWORD, [swordPose.shoulder[0], swordPose.shoulder[1], swordPose.shoulder[2] * SWORD], [swordPose.elbow, 0, 0], [0, 0, 0]);
   const shieldArm = arm(SHIELD, [-0.32, 0, 0.16 * SHIELD], [-1.12, 0, 0], [0, 0, 0]);
   const left = SWORD === 1 ? swordArm : shieldArm;
   const right = SWORD === 1 ? shieldArm : swordArm;
@@ -882,15 +885,14 @@ export function buildKnight(THREE, options = {}) {
   sword.position.copy(gripInFist).applyQuaternion(fistQ).add(swordArm.fist.position);
   sword.quaternion.copy(fistQ).multiply(new THREE.Quaternion().setFromRotationMatrix(gripAxes));
   swordArm.hand.add(sword);
-  // Pose parada: braço quase reto e solto. Com o pulso neutro a lâmina sai à
-  // frente, quase na horizontal; o pulso só inclina cerca de 30° para baixo
-  // (a menor rotação que leva a lâmina até lá), como quem anda de espada na mão.
+  // Pose parada: a lâmina aponta para a frente, um pouco para fora e para cima,
+  // como na guarda baixa (mão à frente do quadril, ponta para o oponente). O pulso faz a menor rotação a partir da posição neutra da mão para
+  // levar a lâmina até lá; o giro em torno do braço fica com o antebraço.
   knight.updateMatrixWorld(true);
   const bladeNow = new THREE.Vector3(0, -1, 0).transformDirection(sword.matrixWorld);
-  const side30 = new THREE.Vector3().crossVectors(bladeNow, new THREE.Vector3(0, 1, 0)).normalize();
-  const down = [0.52, -0.52].map(a => bladeNow.clone().applyAxisAngle(side30, a)).sort((p, q) => p.y - q.y)[0];
+  const aim = new THREE.Vector3(...(options.swordAim ?? [0.1 * SWORD, 0.35, 1])).normalize();
   const handWorld = swordArm.hand.getWorldQuaternion(new THREE.Quaternion());
-  const tilt = new THREE.Quaternion().setFromUnitVectors(bladeNow, down);
+  const tilt = new THREE.Quaternion().setFromUnitVectors(bladeNow, aim);
   const elbowWorld = swordArm.elbow.getWorldQuaternion(new THREE.Quaternion());
   const handRel = elbowWorld.clone().invert().multiply(tilt.multiply(handWorld));
   const split = splitWristTwist(THREE, handRel);
