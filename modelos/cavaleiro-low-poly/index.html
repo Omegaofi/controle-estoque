@@ -39,10 +39,10 @@
     position: relative; min-height: 420px; border-radius: 10px; overflow: hidden;
     background: linear-gradient(var(--stage-top), var(--stage-bottom));
   }
-  .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; image-rendering: pixelated; }
   .stage canvas:active { cursor: grabbing; }
   .hint {
-    position: absolute; left: 14px; bottom: 12px; margin: 0; font-size: 12px; color: var(--muted);
+    position: absolute; left: 14px; bottom: 12px; margin: 0; font-size: 12px; color: #33402f;
     font-family: var(--font-mono); pointer-events: none;
   }
   aside {
@@ -65,6 +65,10 @@
   }
   button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .range { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 13px; }
+  .range label { color: var(--muted); }
+  .range output { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .range input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
   .files { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
   .files code { font-family: var(--font-mono); color: var(--fg); font-size: 12px; }
   @media (max-width: 760px) {
@@ -81,12 +85,18 @@
   <aside>
     <div>
       <h1>Cavaleiro Low Poly</h1>
-      <p class="lede">Sem elmo, capa verde, escudo no braço direito e espada na mão esquerda. Cores chapadas, sem textura de imagem.</p>
+      <p class="lede">Sem elmo, capa verde, escudo no braço direito e espada na mão esquerda. Pixel art com sombreamento de desenho em 3 tons e contorno escuro.</p>
     </div>
     <div class="controls">
       <button id="spin" type="button" aria-pressed="true">Girar sozinho</button>
-      <button id="wire" type="button" aria-pressed="false">Malha</button>
+      <button id="pixel" type="button" aria-pressed="true">Pixel art</button>
+      <button id="outline" type="button" aria-pressed="true">Contorno</button>
       <button id="back" type="button">Ver de costas</button>
+    </div>
+    <div class="range">
+      <label for="pixel-size">Tamanho do pixel</label>
+      <output id="pixel-size-out" for="pixel-size">5 px</output>
+      <input id="pixel-size" type="range" min="2" max="10" step="1" value="5">
     </div>
     <section>
       <h2>Ficha técnica</h2>
@@ -106,6 +116,7 @@
       <h2>Arquivos</h2>
       <ul class="files">
         <li><code>cavaleiro.glb</code> · Blender, Unity, Godot</li>
+        <li><code>cavaleiro_contorno.glb</code> · com o contorno embutido</li>
         <li><code>cavaleiro.obj</code> + <code>.mtl</code></li>
         <li><code>knight.js</code> · gerador Three.js</li>
       </ul>
@@ -122,7 +133,7 @@
 <script type="module">
   import * as THREE from 'three';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-  import { buildKnight, PALETTE } from './knight.js';
+  import { buildKnight, addOutline, toonRamp, PALETTE } from './knight.js';
 
   const LABELS = {
     pele: 'Pele', cabelo: 'Cabelo e barba', aco: 'Aço claro', acoEscuro: 'Aço escuro',
@@ -131,33 +142,49 @@
   };
 
   const stage = document.getElementById('stage');
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(1);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.BasicShadowMap;
   stage.prepend(renderer.domElement);
 
+  renderer.setClearColor(0x000000, 0);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50);
   camera.position.set(2.1, 1.5, 3.4);
 
-  scene.add(new THREE.HemisphereLight(0xf4f7ff, 0x50604a, 1.4));
-  const sun = new THREE.DirectionalLight(0xfff3df, 2.4);
+  // Luz ambiente + sol direcional: o sombreamento toon fica em faixas nítidas.
+  scene.add(new THREE.AmbientLight(0xe9eef5, 1.1));
+  const sun = new THREE.DirectionalLight(0xfff1d8, 2.6);
   sun.position.set(2.5, 4, 3);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(512, 512);
+  sun.shadow.bias = -0.002;
+  sun.shadow.normalBias = 0.03;
   Object.assign(sun.shadow.camera, { left: -1.5, right: 1.5, top: 2.2, bottom: -0.5 });
   scene.add(sun);
 
   const ground = new THREE.Mesh(
     new THREE.CircleGeometry(1.4, 10),
-    new THREE.MeshStandardMaterial({ color: 0x7d8f6f, flatShading: true, roughness: 1 })
+    Object.assign(new THREE.MeshToonMaterial({ color: 0x7d8f6f, gradientMap: toonRamp(THREE) }), { flatShading: true })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
 
-  const knight = buildKnight(THREE);
+  const knight = buildKnight(THREE, { toon: true });
+  // Conta antes de adicionar o contorno, para a ficha mostrar só o modelo.
+  let tris = 0, verts = 0, parts = 0;
+  const materials = new Set();
+  knight.traverse(o => {
+    if (!o.isMesh) return;
+    parts++;
+    materials.add(o.material);
+    const g = o.geometry;
+    verts += g.attributes.position.count;
+    tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+  });
+  const outlineMat = addOutline(THREE, knight, 0.016);
   scene.add(knight);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -169,17 +196,42 @@
   controls.autoRotateSpeed = 1.2;
   controls.update();
 
-  // Ficha técnica
-  let tris = 0, verts = 0, parts = 0;
-  const materials = new Set();
-  knight.traverse(o => {
-    if (!o.isMesh) return;
-    parts++;
-    materials.add(o.material);
-    const g = o.geometry;
-    verts += g.attributes.position.count;
-    tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+  // Filtro de pixel art: renderiza numa textura de baixa resolução e amplia
+  // sem suavizar. Onde o fundo encosta no personagem vira contorno de 1 pixel.
+  const lowRes = new THREE.WebGLRenderTarget(1, 1, {
+    minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, type: THREE.HalfFloatType,
   });
+  const pixelMat = new THREE.ShaderMaterial({
+    uniforms: {
+      tScene: { value: lowRes.texture },
+      texel: { value: new THREE.Vector2() },
+      bg: { value: new THREE.Color(0xb9c9b3) },
+      ink: { value: new THREE.Color(0x15110e) },
+      outline: { value: 1 },
+    },
+    vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: `
+      uniform sampler2D tScene; uniform vec2 texel; uniform vec3 bg; uniform vec3 ink; uniform float outline;
+      varying vec2 vUv;
+      void main() {
+        vec4 c = texture2D(tScene, vUv);
+        if (c.a > 0.5) {
+          gl_FragColor = vec4(c.rgb, 1.0);
+        } else {
+          float n = texture2D(tScene, vUv + vec2(texel.x, 0.0)).a + texture2D(tScene, vUv - vec2(texel.x, 0.0)).a
+                  + texture2D(tScene, vUv + vec2(0.0, texel.y)).a + texture2D(tScene, vUv - vec2(0.0, texel.y)).a;
+          gl_FragColor = vec4(n > 0.5 && outline > 0.5 ? ink : bg, 1.0);
+        }
+        #include <colorspace_fragment>
+      }`,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const screenScene = new THREE.Scene();
+  screenScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), pixelMat));
+  const screenCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  let pixelSize = 5, pixelOn = true;
+
   const box = new THREE.Box3().setFromObject(knight);
   const fmt = n => n.toLocaleString('pt-BR');
   document.getElementById('tris').textContent = fmt(tris);
@@ -199,18 +251,35 @@
   }
 
   // Controles
-  const spinBtn = document.getElementById('spin');
-  spinBtn.setAttribute('aria-pressed', String(controls.autoRotate));
-  spinBtn.addEventListener('click', () => {
-    controls.autoRotate = !controls.autoRotate;
-    spinBtn.setAttribute('aria-pressed', String(controls.autoRotate));
+  function toggle(id, initial, onChange) {
+    const btn = document.getElementById(id);
+    btn.setAttribute('aria-pressed', String(initial));
+    btn.addEventListener('click', () => {
+      const on = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', String(on));
+      onChange(on);
+    });
+  }
+  toggle('spin', controls.autoRotate, on => { controls.autoRotate = on; });
+  toggle('pixel', true, on => {
+    pixelOn = on;
+    pixelRange.disabled = !on;
+    resize();
   });
-  const wireBtn = document.getElementById('wire');
-  wireBtn.addEventListener('click', () => {
-    const on = wireBtn.getAttribute('aria-pressed') !== 'true';
-    materials.forEach(m => { m.wireframe = on; });
-    wireBtn.setAttribute('aria-pressed', String(on));
+  toggle('outline', true, on => {
+    outlineMat.visible = on;
+    pixelMat.uniforms.outline.value = on ? 1 : 0;
   });
+
+  const pixelRange = document.getElementById('pixel-size');
+  const pixelOut = document.getElementById('pixel-size-out');
+  pixelRange.addEventListener('input', () => {
+    const v = Number(pixelRange.value);
+    pixelOut.textContent = v + ' px';
+    pixelSize = v;
+    resize();
+  });
+
   const backBtn = document.getElementById('back');
   backBtn.addEventListener('click', () => {
     const behind = camera.position.z > 0;
@@ -223,6 +292,10 @@
   function resize() {
     const w = stage.clientWidth, h = stage.clientHeight;
     renderer.setSize(w, h, false);
+    const ps = pixelOn ? pixelSize : 1;
+    const lw = Math.max(1, Math.round(w / ps)), lh = Math.max(1, Math.round(h / ps));
+    lowRes.setSize(lw, lh);
+    pixelMat.uniforms.texel.value.set(1 / lw, 1 / lh);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
@@ -231,7 +304,11 @@
 
   renderer.setAnimationLoop(() => {
     controls.update();
+    renderer.setRenderTarget(lowRes);
+    renderer.clear();
     renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    renderer.render(screenScene, screenCam);
   });
   window.__knightReady = true;
 </script>

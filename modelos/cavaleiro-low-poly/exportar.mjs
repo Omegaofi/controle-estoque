@@ -1,9 +1,9 @@
-// Gera cavaleiro.glb e cavaleiro.obj/.mtl a partir de knight.js.
+// Gera cavaleiro.glb, cavaleiro_contorno.glb e cavaleiro.obj/.mtl a partir de knight.js.
 // Uso: npm install three@0.160.0 && node exportar.mjs
 import fs from 'node:fs';
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { buildKnight, PALETTE } from './knight.js';
+import { buildKnight, addOutline, PALETTE } from './knight.js';
 
 // O GLTFExporter usa FileReader, que não existe no Node.
 globalThis.FileReader ??= class {
@@ -21,6 +21,13 @@ knight.updateMatrixWorld(true);
 
 const glb = await new GLTFExporter().parseAsync(knight, { binary: true });
 fs.writeFileSync('cavaleiro.glb', Buffer.from(glb));
+
+// Versão com o contorno de desenho (casco invertido) embutido na malha.
+const outlined = buildKnight(THREE);
+addOutline(THREE, outlined, 0.016);
+outlined.updateMatrixWorld(true);
+const glbOutline = await new GLTFExporter().parseAsync(outlined, { binary: true });
+fs.writeFileSync('cavaleiro_contorno.glb', Buffer.from(glbOutline));
 
 // OBJ com normais chapadas e um material por cor.
 const obj = ['# Cavaleiro low poly', 'mtllib cavaleiro.mtl'];

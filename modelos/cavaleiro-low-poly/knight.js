@@ -17,16 +17,31 @@ export const PALETTE = {
   olho: 0x1d1b1a,
 };
 
-export function buildKnight(THREE) {
+// Rampa de 3 tons para o sombreamento de desenho (cel shading).
+export function toonRamp(THREE, steps = [70, 160, 255]) {
+  const data = new Uint8Array(steps.length * 4);
+  steps.forEach((v, i) => data.set([v, v, v, 255], i * 4));
+  const tex = new THREE.DataTexture(data, steps.length, 1, THREE.RGBAFormat);
+  tex.minFilter = tex.magFilter = THREE.NearestFilter;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// options.toon = true usa MeshToonMaterial em faixas; senão MeshStandardMaterial (exportação).
+export function buildKnight(THREE, options = {}) {
+  const ramp = options.toon ? toonRamp(THREE) : null;
   const mats = {};
   for (const [name, color] of Object.entries(PALETTE)) {
-    mats[name] = new THREE.MeshStandardMaterial({
-      name,
-      color,
-      flatShading: true,
-      roughness: name === 'aco' || name === 'lamina' || name === 'ouro' ? 0.45 : 0.85,
-      metalness: name === 'aco' || name === 'lamina' || name === 'ouro' ? 0.35 : 0.0,
-    });
+    const metal = name === 'aco' || name === 'lamina' || name === 'ouro';
+    mats[name] = ramp
+      ? Object.assign(new THREE.MeshToonMaterial({ name, color, gradientMap: ramp }), { flatShading: true })
+      : new THREE.MeshStandardMaterial({
+          name,
+          color,
+          flatShading: true,
+          roughness: metal ? 0.45 : 0.85,
+          metalness: metal ? 0.35 : 0.0,
+        });
   }
   mats.capa.side = THREE.DoubleSide;
 
@@ -147,11 +162,63 @@ export function buildKnight(THREE) {
     pos.setXYZ(i, x * fold, y - (t > 0.99 ? 0.04 * Math.cos(theta * 3) : 0), z * fold * 0.8 - 0.06 - 0.12 * t);
   }
   capeGeo.computeVertexNormals();
-  mesh('Capa', capeGeo, 'capa', knight, [0, 1.5 - capeH / 2, -0.02]);
+  // Sem auto-sombra: a capa é uma folha dupla e mancharia a si mesma.
+  mesh('Capa', capeGeo, 'capa', knight, [0, 1.5 - capeH / 2, -0.02]).receiveShadow = false;
   mesh('GolaCapa', new THREE.CylinderGeometry(0.2, 0.3, 0.08, 8, 1, true), 'capaInterna', knight, [0, 1.52, -0.02], [0, Math.PI / 8, 0], [1, 1, 0.8]);
   for (const side of [1, -1]) {
     mesh(`Broche${side === 1 ? 'Esquerdo' : 'Direito'}`, new THREE.IcosahedronGeometry(0.035, 0), 'ouro', knight, [0.2 * side, 1.5, 0.15]);
   }
 
   return knight;
+}
+
+// Contorno de desenho por "casco invertido": uma cópia de cada peça, inflada ao
+// longo das normais suavizadas e com as faces viradas para dentro. Só aparece
+// em volta da silhueta, funciona em qualquer engine (não precisa de shader).
+export function addOutline(THREE, root, thickness = 0.012, color = 0x15110e) {
+  const mat = new THREE.MeshBasicMaterial({ name: 'contorno', color });
+  const meshes = [];
+  root.traverse(o => { if (o.isMesh && !o.userData.outline) meshes.push(o); });
+  for (const m of meshes) {
+    const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    const pos = g.attributes.position;
+    // Normal média por posição, para o casco não abrir nas arestas chapadas.
+    const key = i => `${pos.getX(i).toFixed(4)},${pos.getY(i).toFixed(4)},${pos.getZ(i).toFixed(4)}`;
+    const sum = new Map();
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i += 3) {
+      a.fromBufferAttribute(pos, i); b.fromBufferAttribute(pos, i + 1); c.fromBufferAttribute(pos, i + 2);
+      const n = new THREE.Vector3().subVectors(c, b).cross(new THREE.Vector3().subVectors(a, b)).normalize();
+      for (let k = 0; k < 3; k++) {
+        const id = key(i + k);
+        if (!sum.has(id)) sum.set(id, new THREE.Vector3());
+        sum.get(id).add(n);
+      }
+    }
+    const sx = m.scale.x, sy = m.scale.y, sz = m.scale.z;
+    for (let i = 0; i < pos.count; i++) {
+      const n = sum.get(key(i)).clone().normalize();
+      pos.setXYZ(i,
+        pos.getX(i) + n.x * thickness / sx,
+        pos.getY(i) + n.y * thickness / sy,
+        pos.getZ(i) + n.z * thickness / sz);
+    }
+    // Inverte a ordem dos vértices de cada triângulo (faces para dentro).
+    for (let i = 0; i < pos.count; i += 3) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      pos.setXYZ(i, pos.getX(i + 2), pos.getY(i + 2), pos.getZ(i + 2));
+      pos.setXYZ(i + 2, x, y, z);
+    }
+    g.deleteAttribute('normal');
+    g.deleteAttribute('uv');
+    g.computeVertexNormals();
+    const hull = new THREE.Mesh(g, mat);
+    hull.name = `${m.name}_Contorno`;
+    hull.userData.outline = true;
+    hull.position.copy(m.position);
+    hull.rotation.copy(m.rotation);
+    hull.scale.copy(m.scale);
+    m.parent.add(hull);
+  }
+  return mat;
 }
