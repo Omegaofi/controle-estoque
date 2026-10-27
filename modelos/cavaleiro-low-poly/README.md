@@ -35,8 +35,11 @@ lado esquerdo e topete na frente.
   da espada fica na vertical, alinhada com a mão, parada e durante o golpe.
   Pegada: o cabo passa por dentro dos dedos fechados, a guarda encosta logo
   depois do indicador (lado do polegar), o gume fica alinhado com os nós dos
-  dedos e o resto do cabo e o pomo saem pelo lado do mindinho; parado e
-  andando, a lâmina aponta à frente e um pouco para baixo.
+  dedos e o resto do cabo e o pomo saem pelo lado do mindinho. Parado e
+  andando, o braço da espada fica quase reto e solto, e o pulso só inclina
+  cerca de 30° a partir da posição neutra. Nas animações, o giro em torno do
+  eixo do braço é feito pelo antebraço (como na pronação), e a espada pode
+  girar até 60° em torno da lâmina quando isso poupa o pulso.
 
 **Animação de caminhada** (`animacoes.js`, ciclo de 1,2 s em loop), baseada
 no relatório de referência sobre o caminhar do cavaleiro de espada e escudo:

@@ -1,3 +1,5 @@
+import { splitWristTwist } from './knight.js';
+
 // Animações do cavaleiro: caminhada, ataque (corte horizontal) e defesa
 // (bloqueio com escudo, de lado, com as pernas firmando a base). Um único motor
 // toca os clipes.
@@ -84,8 +86,8 @@ const G = {
 };
 const B = {
   bacia: [0.05, -0.09, -0.06], yaw: 0.6, tronco: [0.35, 0.08, 0],
-  espada: [0.09, 0.5, 0.12], lamina: [-0.81, 0.03, 0.58], escudo: [-0.28, 0.2, 0.24],
-  poloEspada: [0.7, -0.7, -0.1], poloEscudo: [-0.3, -0.5, -1],
+  espada: [0.12, 0.52, 0.05], lamina: [-0.81, 0.03, 0.58], escudo: [-0.28, 0.2, 0.24],
+  poloEspada: [1, -0.5, 0.3], poloEscudo: [-0.3, -0.5, -1],
   peEspada: [0.22, -0.28, 0, 1.2], peEscudo: [-0.12, 0.16, 0, 0.2],
 };
 export const DEFESA = {
@@ -111,7 +113,7 @@ export const DEFESA = {
       [2.2, 0.05, 0], [2.65, 0, 0], [3.2, 0, 0],
     ],
     maoEspada: [
-      [0, ...G.espada], [0.3, ...B.espada], [0.74, ...B.espada], [0.79, 0.09, 0.48, 0.07], [0.84, 0.09, 0.48, 0.07],
+      [0, ...G.espada], [0.3, ...B.espada], [0.74, ...B.espada], [0.79, 0.12, 0.5, 0.02], [0.84, 0.12, 0.5, 0.02],
       [1.3, ...B.espada], [2.2, ...B.espada], [2.65, ...G.espada], [3.2, ...G.espada],
     ],
     lamina: [
@@ -174,8 +176,7 @@ export const CAMINHADA = {
     baciaYaw: walkKeys(u => [-0.08 * Math.cos(TAU * u)]),
     tronco: walkKeys(u => [0.11 * Math.cos(TAU * (u - 0.03)), 0.05 + 0.01 * Math.cos(2 * TAU * (u - 0.1)), 0.015 * Math.sin(TAU * u)]),
     cabeca: walkKeys(() => [0.02, 0]),
-    maoEspada: walkKeys(u => [0.235, -0.06 + 0.008 * Math.cos(2 * TAU * (u - 0.1)), 0.12 - 0.035 * Math.cos(TAU * (u - 0.07))]),
-    lamina: walkKeys(u => [0.05, -0.42 - 0.04 * Math.cos(TAU * (u - 0.1)), 0.9]),
+    maoEspada: walkKeys(u => [0.23, -0.11 + 0.006 * Math.cos(2 * TAU * (u - 0.1)), 0.07 - 0.04 * Math.cos(TAU * (u - 0.07))]),
     maoEscudo: walkKeys(u => [-0.2, 0.06 + 0.006 * Math.cos(2 * TAU * (u - 0.12)), 0.27 + 0.012 * Math.cos(TAU * (u - 0.1))]),
     peEspada: walkKeys(footAt(0, 0.13, 0.08), 48),
     peEscudo: walkKeys(footAt(0.5, -0.13, -0.08), 48),
@@ -300,6 +301,7 @@ export function createAnimation(THREE, knight, clip = ATAQUE, { deformCape = tru
 
   const tmp = V(), d = V(), pole = V(), target = V();
   const qInv = new THREE.Quaternion(), qWorld = new THREE.Quaternion(), qSword = new THREE.Quaternion();
+  const qRoll = new THREE.Quaternion(), qTry = new THREE.Quaternion();
   const swordLocalInv = rig.espada.quaternion.clone().invert();
   const bx = V(), by = V(), bz = V(), basis = new THREE.Matrix4();
 
@@ -347,8 +349,15 @@ export function createAnimation(THREE, knight, clip = ATAQUE, { deformCape = tru
     twoBone(shieldArm.shoulder, shieldArm.elbow, rig.upperArm, rig.forearm, d, pole.set(ep0 * M, ep1, ep2), -1);
 
     // Orientação da espada: ponta na direção da lâmina e guarda (eixo x local)
-    // na vertical, alinhada com a mão; convertida para a rotação do pulso.
-    const [ax, ay, az] = sample(CHANNELS.lamina, t);
+    // na vertical, alinhada com a mão; convertida para a rotação do pulso. O
+    // giro em torno do eixo do antebraço vai para o próprio antebraço, e o
+    // pulso fica só com a flexão. Sem canal de lâmina, a mão mantém a pegada
+    // da pose parada e a espada acompanha o braço.
+    if (!CHANNELS.lamina) {
+      swordArm.elbow.rotation.y = swordArm.twistRest ?? 0;
+      swordArm.hand.quaternion.copy(swordArm.handRest ?? swordArm.hand.quaternion);
+    }
+    const [ax, ay, az] = CHANNELS.lamina ? sample(CHANNELS.lamina, t) : [0, -1, 0];
     by.set(-ax * M, -ay, -az).normalize(); // o eixo +y local da espada aponta para o pomo
     tmp.set(0, 1, 0);
     bx.copy(tmp).addScaledVector(by, -tmp.dot(by));
@@ -358,9 +367,26 @@ export function createAnimation(THREE, knight, clip = ATAQUE, { deformCape = tru
     qSword.setFromRotationMatrix(basis.makeBasis(bx, by, bz));
     knight.updateMatrixWorld(true);
     rig.tronco.getWorldQuaternion(qWorld);
-    qWorld.multiply(qSword).multiply(swordLocalInv);
-    swordArm.elbow.getWorldQuaternion(qInv).invert();
-    swordArm.hand.quaternion.copy(qInv.multiply(qWorld));
+    // A espada pode girar até 60° em torno da própria lâmina (a guarda sai da
+    // vertical) quando isso poupa o pulso: escolhe o giro com a menor dobra.
+    if (CHANNELS.lamina) {
+      swordArm.elbow.getWorldQuaternion(qInv).invert();
+      let best = null;
+      for (let r = -60; r <= 60; r += 10) {
+        qRoll.setFromAxisAngle(by, (r * Math.PI) / 180).multiply(qSword);
+        qTry.copy(qWorld).multiply(qRoll).multiply(swordLocalInv);
+        const sp = splitWristTwist(THREE, qInv.clone().multiply(qTry));
+        const bend = 2 * Math.acos(Math.min(1, Math.abs(sp.wrist.w))) + Math.abs(r) * 0.002;
+        if (!best || bend < best.bend) best = { bend, q: qTry.clone() };
+      }
+      qWorld.copy(best.q);
+    } else qWorld.multiply(qSword).multiply(swordLocalInv);
+    if (CHANNELS.lamina) {
+      swordArm.elbow.getWorldQuaternion(qInv).invert();
+      const split = splitWristTwist(THREE, qInv.multiply(qWorld));
+      swordArm.elbow.rotation.y = split.twistAngle;
+      swordArm.hand.quaternion.copy(split.wrist);
+    }
     shieldArm.hand.quaternion.identity();
     // Espaldares presos ao tronco: seguem só uma parte do giro do ombro.
     for (const arm of [swordArm, shieldArm]) {

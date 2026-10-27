@@ -347,6 +347,21 @@ function boxUV(THREE, geometry, scale) {
   return g;
 }
 
+// Divide a rotação da mão (relativa ao antebraço) em giro em torno do eixo do
+// antebraço (y local, feito pelo próprio antebraço, como na pronação e na
+// supinação) e o resto (flexão e desvio do pulso). Assim o pulso não torce.
+export function splitWristTwist(THREE, q, maxTwist = 1.7) {
+  const tw = new THREE.Quaternion(0, q.y, 0, q.w);
+  if (tw.lengthSq() < 1e-9) tw.identity(); else tw.normalize();
+  let angle = 2 * Math.atan2(tw.y, tw.w);
+  if (angle > Math.PI) angle -= 2 * Math.PI;
+  if (angle < -Math.PI) angle += 2 * Math.PI;
+  angle = Math.max(-maxTwist, Math.min(maxTwist, angle));
+  const twist = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+  const wrist = twist.clone().invert().multiply(q);
+  return { twistAngle: angle, wrist };
+}
+
 // ---------- Personagem ----------
 
 // options.toon = true usa MeshToonMaterial em faixas; senão MeshStandardMaterial (exportação).
@@ -736,7 +751,7 @@ export function buildKnight(THREE, options = {}) {
     rivet(elbow, -0.05 * side, -0.06, 0);
 
     const hand = group(`Mao${L}`, elbow, [0, -0.25, 0], wristRot);
-    joint(`ArticulacaoPulso${L}`, hand, 0.03, [0, 0.01, 0]);
+    joint(`ArticulacaoPulso${L}`, hand, 0.026, [0, 0.012, 0]);
     mesh(`Manopla${L}`, loft(THREE, [
       { y: 0.01, w: 0.04, f: 0.036 },
       { y: -0.035, w: 0.049, f: 0.041 },
@@ -766,7 +781,7 @@ export function buildKnight(THREE, options = {}) {
   // Lado da espada: -1 = mão direita. O escudo fica no outro braço.
   const SWORD = -1, SHIELD = -SWORD;
   // Braço da espada caído ao lado; braço do escudo com o antebraço à frente.
-  const swordArm = arm(SWORD, [-0.08, 0, 0.13 * SWORD], [-0.5, 0, 0], [0, 0, 0]);
+  const swordArm = arm(SWORD, [-0.05, 0, 0.1 * SWORD], [-0.22, 0, 0], [0, 0, 0]);
   const shieldArm = arm(SHIELD, [-0.32, 0, 0.16 * SHIELD], [-1.12, 0, 0], [0, 0, 0]);
   const left = SWORD === 1 ? swordArm : shieldArm;
   const right = SWORD === 1 ? shieldArm : swordArm;
@@ -867,16 +882,22 @@ export function buildKnight(THREE, options = {}) {
   sword.position.copy(gripInFist).applyQuaternion(fistQ).add(swordArm.fist.position);
   sword.quaternion.copy(fistQ).multiply(new THREE.Quaternion().setFromRotationMatrix(gripAxes));
   swordArm.hand.add(sword);
-  // Pose parada: o pulso gira para a lâmina apontar à frente e para baixo, com a
-  // guarda na vertical (no plano vertical que contém a lâmina).
+  // Pose parada: braço quase reto e solto. Com o pulso neutro a lâmina sai à
+  // frente, quase na horizontal; o pulso só inclina cerca de 30° para baixo
+  // (a menor rotação que leva a lâmina até lá), como quem anda de espada na mão.
   knight.updateMatrixWorld(true);
-  const bladeDir = new THREE.Vector3(0.05 * SWORD, -0.42, 0.9).normalize();
-  const swordY = bladeDir.clone().negate();
-  const swordX = new THREE.Vector3(0, 1, 0).addScaledVector(swordY, -swordY.y).normalize();
-  const swordZ = new THREE.Vector3().crossVectors(swordX, swordY);
-  const swordWorld = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(swordX, swordY, swordZ));
+  const bladeNow = new THREE.Vector3(0, -1, 0).transformDirection(sword.matrixWorld);
+  const side30 = new THREE.Vector3().crossVectors(bladeNow, new THREE.Vector3(0, 1, 0)).normalize();
+  const down = [0.52, -0.52].map(a => bladeNow.clone().applyAxisAngle(side30, a)).sort((p, q) => p.y - q.y)[0];
+  const handWorld = swordArm.hand.getWorldQuaternion(new THREE.Quaternion());
+  const tilt = new THREE.Quaternion().setFromUnitVectors(bladeNow, down);
   const elbowWorld = swordArm.elbow.getWorldQuaternion(new THREE.Quaternion());
-  swordArm.hand.quaternion.copy(elbowWorld.invert().multiply(swordWorld).multiply(sword.quaternion.clone().invert()));
+  const handRel = elbowWorld.clone().invert().multiply(tilt.multiply(handWorld));
+  const split = splitWristTwist(THREE, handRel);
+  swordArm.elbow.rotation.y = split.twistAngle;
+  swordArm.hand.quaternion.copy(split.wrist);
+  swordArm.handRest = swordArm.hand.quaternion.clone();
+  swordArm.twistRest = split.twistAngle;
 
   // ---------- Bainha no quadril esquerdo, presa ao cinto ----------
   const scabbard = group('Bainha', knight, [0.18, 0.93, 0.05]);
