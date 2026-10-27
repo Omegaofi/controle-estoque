@@ -18,8 +18,7 @@ export const PALETTE = {
   madeira: 0x5a4838,
   escudoFace: 0xa7a18e,
   lamina: 0xa2a8ad,
-  olho: 0x2a2019,
-  olhoBranco: 0xd6d0c6,
+  olho: 0x1f1915,
   rosto: 0xffffff,
   bordado: 0x7b6d4d,
 };
@@ -97,13 +96,12 @@ const gauss = (v, c, w) => Math.exp(-(((v - c) / w) ** 2));
 function headPoint(nx, ny, nz, k = 1) {
   let x = nx, y = ny, z = nz;
   // Relevo do rosto (só na frente): arco das sobrancelhas, órbitas dos olhos,
-  // maçãs do rosto, lábios e queixo.
+  // maçãs do rosto e queixo. Sem boca.
   const front = Math.min(1, Math.max(0, (nz - 0.55) / 0.3));
   const ax = Math.abs(nx);
   z += front * (
     0.05 * gauss(ny, 0.3, 0.09) * gauss(ax, 0.3, 0.22)
     - 0.06 * gauss(ny, 0.13, 0.08) * gauss(ax, 0.32, 0.12)
-    + 0.025 * gauss(ny, -0.55, 0.06) * gauss(nx, 0, 0.22)
     + 0.06 * gauss(ny, -0.82, 0.1) * gauss(nx, 0, 0.25));
   const cheek = 1 + 0.045 * gauss(ny, -0.05, 0.15) * gauss(ax, 0.62, 0.16);
   x *= cheek;
@@ -277,15 +275,15 @@ export function makeTexture(THREE, pattern, seed = 1) {
 }
 
 // Textura do rosto (128×128, colorida): pele com variação leve, sombra das
-// órbitas, sobrancelhas, sombra sob o nariz, lábios, corado nas maçãs e sombra
-// suave da barba feita. As coordenadas seguem a projeção de frente usada nas
+// órbitas, sobrancelhas, sombra sob o nariz, corado nas maçãs e sombra suave da
+// barba feita. Sem boca. As coordenadas seguem a projeção de frente usada nas
 // UVs do crânio: u = 0,5 + x/0,16 e v = 0,5 + y/0,25 (em metros, no espaço da cabeça).
 export function makeFaceTexture(THREE, skin, brow) {
   const S = 128;
   const rgb = h => [(h >> 16) & 255, (h >> 8) & 255, h & 255];
   const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
   const base = rgb(skin), dark = rgb(brow);
-  const lipUp = [150, 96, 82], lipLow = [166, 110, 94], blush = [190, 120, 108], stubble = [128, 104, 92];
+  const blush = [190, 120, 108], stubble = [128, 104, 92];
   const noise = valueNoise(77, 16);
   const data = new Uint8Array(S * S * 4);
   for (let py = 0; py < S; py++) {
@@ -305,18 +303,11 @@ export function makeFaceTexture(THREE, skin, brow) {
       }
       // Sombra sob o nariz e entre o nariz e a boca.
       if (ax < 0.016 && Math.abs(y + 0.036) < 0.004) c = c.map(v => v * 0.86);
-      if (ax < 0.006 && y < -0.04 && y > -0.054) c = c.map(v => v * 0.95);
-      // Lábios.
-      const upW = 0.019 * Math.sqrt(Math.max(0, 1 - ((y + 0.059) / 0.0045) ** 2));
-      const lowW = 0.016 * Math.sqrt(Math.max(0, 1 - ((y + 0.066) / 0.0045) ** 2));
-      if (y > -0.0615 && ax < upW) c = mix(c, lipUp, 0.75);
-      else if (y <= -0.0615 && ax < lowW) c = mix(c, lipLow, 0.7);
-      if (Math.abs(y + 0.0615) < 0.0011 && ax < 0.017) c = c.map(v => v * 0.6);
       // Corado nas maçãs do rosto.
       const ch = Math.hypot(ax - 0.047, y + 0.02) / 0.022;
       if (ch < 1) c = mix(c, blush, 0.14 * (1 - ch));
-      // Barba bem feita: sombra leve no queixo e mandíbula, fora dos lábios.
-      if (y < -0.05 && !(ax < 0.021 && y > -0.072)) c = mix(c, stubble, 0.1 * Math.min(1, (-0.05 - y) / 0.02));
+      // Barba bem feita: sombra leve no queixo e na mandíbula.
+      if (y < -0.05) c = mix(c, stubble, 0.1 * Math.min(1, (-0.05 - y) / 0.02));
       data.set([...c.map(v => Math.round(Math.min(255, Math.max(0, v)))), 255], (py * S + px) * 4);
     }
   }
@@ -654,9 +645,8 @@ export function buildKnight(THREE, options = {}) {
   ], [0, -0.01, 0.07]), 'pele', head, [0, 0, 0], [0, 0, 0], [1, 1, 1], { noOutline: true });
   for (const side of [1, -1]) {
     const S = side === 1 ? 'Esquerdo' : 'Direito';
-    // Olho: branco amendoado com a íris escura por cima.
-    mesh(`Olho${S}`, new THREE.SphereGeometry(1, 8, 5), 'olhoBranco', head, [0.03 * side, 0.016, 0.0795], [0, 0.3 * side, 0], [0.0115, 0.0058, 0.0042], { noOutline: true });
-    mesh(`Iris${S}`, new THREE.SphereGeometry(1, 6, 4), 'olho', head, [0.028 * side, 0.016, 0.0832], [0, 0.3 * side, 0], [0.0052, 0.0052, 0.0016], { noOutline: true });
+    // Olho escuro e discreto, em forma de amêndoa.
+    mesh(`Olho${S}`, new THREE.SphereGeometry(1, 8, 5), 'olho', head, [0.03 * side, 0.016, 0.0795], [0, 0.3 * side, 0], [0.0105, 0.0052, 0.004], { noOutline: true });
     mesh(`Orelha${S}`, new THREE.IcosahedronGeometry(1, 0), 'pele', head, [0.077 * side, 0.002, -0.01], [0.15, 0, 0], [0.012, 0.03, 0.02], { noOutline: true });
   }
 

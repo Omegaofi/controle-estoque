@@ -95,15 +95,7 @@ d 1
 illum 2
 
 newmtl olho
-Kd 0.1647 0.1255 0.0980
-Ka 0 0 0
-Ks 0.1 0.1 0.1
-Ns 10
-d 1
-illum 2
-
-newmtl olhoBranco
-Kd 0.8392 0.8157 0.7765
+Kd 0.1216 0.0980 0.0824
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
