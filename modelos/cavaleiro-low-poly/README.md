@@ -46,8 +46,8 @@ lado esquerdo e topete na frente.
 no relatório de referência sobre o caminhar do cavaleiro de espada e escudo:
 passo de cerca de 0,48 m, um pouco curto por causa do peso nas pernas, 60% do
 ciclo com o pé no chão; o quadril desce logo após o contato, sobe na passagem e
-vai para o lado do pé de apoio; quadril e tronco giram pouco e em sentidos
-opostos; escudo carregado à frente na altura da cintura e espada baixa com
+vai para o lado do pé de apoio; o tronco e os ombros giram contra o quadril
+(cerca de 9°), o ombro do lado do apoio sobe e o peito balança com o passo; escudo carregado à frente na altura da cintura e espada baixa com
 balanço curto e atrasado; a capa segue o tronco com atraso. O ciclo é feito no
 lugar (os pés deslizam para trás no apoio), e o visualizador o mostra assim,
 sem deslocar o personagem; numa engine, mover a raiz a 0,81 m/s deixa os pés

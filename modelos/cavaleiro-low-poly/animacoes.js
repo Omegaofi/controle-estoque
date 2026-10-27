@@ -154,6 +154,8 @@ export const DEFESA = {
 //   da cintura, e espada à frente, com um balanço curto e atrasado.
 // - Peito, braços e lâmina chegam um pouco depois do quadril (atraso de
 //   alguns quadros), e a capa segue o tronco com atraso.
+// - Os ombros giram cerca de 9° contra o quadril e inclinam cerca de 3°: o
+//   tronco é que leva o movimento, já que os braços estão ocupados.
 const WALK_T = 1.2, STANCE = 0.6, REACH = 0.29;
 const TAU = Math.PI * 2;
 const walkKeys = (f, steps = 24) => Array.from({ length: steps + 1 }, (_, i) => {
@@ -174,12 +176,15 @@ export const CAMINHADA = {
   loop: true,
   rootSpeed: (2 * REACH) / (STANCE * WALK_T),
   channels: {
-    baciaPos: walkKeys(u => [0.02 * Math.sin(TAU * u), -0.05 - 0.012 * Math.cos(2 * TAU * (u - 0.07)), 0]),
-    baciaYaw: walkKeys(u => [-0.08 * Math.cos(TAU * u)]),
-    tronco: walkKeys(u => [0.11 * Math.cos(TAU * (u - 0.03)), 0.05 + 0.01 * Math.cos(2 * TAU * (u - 0.1)), 0.015 * Math.sin(TAU * u)]),
+    baciaPos: walkKeys(u => [0.025 * Math.sin(TAU * u), -0.05 - 0.012 * Math.cos(2 * TAU * (u - 0.07)), 0]),
+    baciaYaw: walkKeys(u => [-0.11 * Math.cos(TAU * u)]),
+    // Tronco: gira contra o quadril (os ombros vão para o lado oposto ao da
+    // perna da frente), o ombro do lado da perna de apoio sobe e o peito balança
+    // um pouco para a frente a cada passo; tudo chega um pouco depois do quadril.
+    tronco: walkKeys(u => [0.27 * Math.cos(TAU * (u - 0.04)), 0.06 + 0.02 * Math.cos(2 * TAU * (u - 0.12)), 0.055 * Math.sin(TAU * (u - 0.05))]),
     cabeca: walkKeys(() => [0.02, 0]),
     maoEspada: walkKeys(u => [0.29, -0.095 + 0.006 * Math.cos(2 * TAU * (u - 0.1)), 0.18 - 0.03 * Math.cos(TAU * (u - 0.07))]),
-    maoEscudo: walkKeys(u => [-0.2, 0.06 + 0.006 * Math.cos(2 * TAU * (u - 0.12)), 0.27 + 0.012 * Math.cos(TAU * (u - 0.1))]),
+    maoEscudo: walkKeys(u => [-0.2, 0.06 + 0.008 * Math.cos(2 * TAU * (u - 0.12)), 0.27 + 0.02 * Math.cos(TAU * (u - 0.1))]),
     peEspada: walkKeys(footAt(0, 0.13, 0.08), 48),
     peEscudo: walkKeys(footAt(0.5, -0.13, -0.08), 48),
   },
