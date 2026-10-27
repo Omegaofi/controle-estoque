@@ -172,6 +172,7 @@ export function createAnimation(THREE, knight, clip = ATAQUE, { deformCape = tru
   for (const s of [1, -1]) {
     animated.push(rig.legs[s].hip, rig.legs[s].knee, rig.legs[s].foot);
     animated.push(rig.arms[s].shoulder, rig.arms[s].elbow, rig.arms[s].hand);
+    for (const pl of rig.arms[s].plates ?? []) animated.push(pl.obj);
   }
   const rest = animated.map(o => ({ o, p: o.position.clone(), q: o.quaternion.clone() }));
   const baciaRest = rig.bacia.position.clone();
@@ -308,6 +309,10 @@ export function createAnimation(THREE, knight, clip = ATAQUE, { deformCape = tru
     swordArm.elbow.getWorldQuaternion(qInv).invert();
     swordArm.hand.quaternion.copy(qInv.multiply(qWorld));
     shieldArm.hand.quaternion.identity();
+    // Espaldares presos ao tronco: seguem só uma parte do giro do ombro.
+    for (const arm of [swordArm, shieldArm]) {
+      for (const pl of arm.plates ?? []) pl.obj.quaternion.identity().slerp(arm.shoulder.quaternion, pl.w);
+    }
 
     knight.updateMatrixWorld(true);
     updateCape(dt);

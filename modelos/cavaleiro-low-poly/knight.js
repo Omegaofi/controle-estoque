@@ -673,7 +673,14 @@ export function buildKnight(THREE, options = {}) {
     ], 10), 'malha', shoulder);
     // Espaldar: cúpula com crista e borda enrolada, friso de latão, placa alta
     // junto ao pescoço, quatro lâminas rebitadas e borda de latão na última.
-    const pauldron = group(`Espaldar${L}`, shoulder, [0.012 * side, 0.02, 0], [0, 0, -0.32 * side]);
+    // Fica preso ao tronco (afivelado na couraça), não ao braço: a cúpula segue
+    // só uma parte do giro do ombro e as lâminas de baixo um pouco mais. Parado,
+    // encosta na couraça; o vão só abre quando o braço se mexe.
+    const platesCupula = group(`OmbroPlacas${L}`, knight, [0.205 * side, 1.44, -0.005]);
+    const platesLaminas = group(`OmbroLaminas${L}`, knight, [0.205 * side, 1.44, -0.005]);
+    const plates = [{ obj: platesCupula, w: 0.3 }, { obj: platesLaminas, w: 0.75 }];
+    for (const pl of plates) pl.obj.quaternion.identity().slerp(shoulder.quaternion, pl.w);
+    const pauldron = group(`Espaldar${L}`, platesCupula, [0.01 * side, 0.008, 0], [0, 0, -0.3 * side]);
     mesh(`EspaldarCupula${L}`, new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), 'aco', pauldron,
       [0, 0, 0], [0, 0, 0], [0.105, 0.075, 0.1]);
     // Crista: aresta saliente de frente para trás, seguindo a curva da cúpula.
@@ -696,7 +703,7 @@ export function buildKnight(THREE, options = {}) {
     mesh(`EspaldarPlacaAltaBorda${L}`, new THREE.BoxGeometry(0.013, 0.007, 0.132), 'latao', pauldron,
       [-0.074 * side, 0.095, 0], [0, 0, 0.18 * side], [1, 1, 1], detail);
     // Lâminas abaixo da cúpula, cada uma com rebites na frente e atrás.
-    const lames = group(`LaminasOmbro${L}`, shoulder, [0.01 * side, 0, 0], [0, 0, -0.25 * side]);
+    const lames = group(`LaminasOmbro${L}`, platesLaminas, [0.01 * side, 0, 0], [0, 0, -0.25 * side]);
     [[-0.015, -0.045, 0.09, 'acoEscuro'], [-0.04, -0.068, 0.084, 'aco'], [-0.062, -0.088, 0.078, 'acoEscuro'], [-0.082, -0.106, 0.072, 'aco']]
       .forEach(([y0, y1, w, mat], i) => {
         mesh(`LaminaOmbro${L}${i + 1}`, loft(THREE, [
@@ -711,8 +718,8 @@ export function buildKnight(THREE, options = {}) {
       { y: -0.101, w: 0.076, f: 0.075 },
     ], 14, { capStart: false, capEnd: false }), 'latao', lames, [0, 0, 0], [0, 0, 0], [1, 1, 1], detail);
     // Correia que liga o espaldar à couraça.
-    mesh(`CorreiaOmbro${L}`, new THREE.BoxGeometry(0.085, 0.005, 0.022), 'couro', shoulder, [-0.05 * side, 0.072, 0], [0, 0, 0.32 * side], [1, 1, 1], detail);
-    mesh(`FivelaOmbro${L}`, new THREE.BoxGeometry(0.016, 0.008, 0.028), 'latao', shoulder, [-0.07 * side, 0.068, 0], [0, 0, 0.32 * side], [1, 1, 1], detail);
+    mesh(`CorreiaOmbro${L}`, new THREE.BoxGeometry(0.085, 0.005, 0.022), 'couro', platesCupula, [-0.05 * side, 0.062, 0], [0, 0, 0.3 * side], [1, 1, 1], detail);
+    mesh(`FivelaOmbro${L}`, new THREE.BoxGeometry(0.016, 0.008, 0.028), 'latao', platesCupula, [-0.07 * side, 0.058, 0], [0, 0, 0.3 * side], [1, 1, 1], detail);
     // Braçal superior com volume de bíceps.
     mesh(`BracalSuperior${L}`, loft(THREE, [
       { y: -0.11, w: 0.051, f: 0.053, b: 0.051 },
@@ -763,7 +770,7 @@ export function buildKnight(THREE, options = {}) {
         [-0.028 + i * 0.019, -0.094 + Math.abs(i - 1.5) * 0.003, 0.015], [0.35, 0, 0], [1, 1, 1], detail);
     }
     mesh(`Polegar${L}`, new THREE.BoxGeometry(0.018, 0.048, 0.019), 'couro', fist, [-0.042 * side, -0.06, -0.016], [0.2, 0, 0.5 * side]);
-    return { shoulder, elbow, hand };
+    return { shoulder, elbow, hand, plates };
   }
 
   // Lado da espada: -1 = mão direita. O escudo fica no outro braço.

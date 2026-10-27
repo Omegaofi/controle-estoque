@@ -15,6 +15,10 @@ lado esquerdo e topete na frente.
 - **Espaldares (ombreiras):** cúpula com crista e borda enrolada, friso de
   latão, oito rebites na borda, placa alta junto ao pescoço com borda de latão,
   quatro lâminas rebitadas e borda de latão na última.
+  Os espaldares ficam presos ao tronco, afivelados na couraça: parados,
+  encostam nela; em movimento a cúpula acompanha só 30% do giro do ombro e as
+  lâminas de baixo 75%, então o vão entre a placa e o braço só abre quando ele
+  se mexe.
 
 - **Conexões no corpo:** articulações de cota de malha em ombros, cotovelos,
   pulsos, quadris, joelhos e tornozelos; mangas e saia de malha por baixo das
