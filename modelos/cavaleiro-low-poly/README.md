@@ -27,19 +27,22 @@ inversa de dois ossos, então os pés ficam no chão e as mãos seguem a trajet�
 A cabeça compensa o giro para manter o olhar no alvo, o escudo abre caminho
 para a lâmina e a capa acompanha o tronco com atraso.
 
-**Animação de defesa** (`animacoes.js`, 3 s em loop), baseada em referências
-do movimento real com escudo e de jogos:
+**Animação de defesa** (`animacoes.js`, 3,2 s em loop): só o bloqueio, sem
+contra-ataque, com o corpo e as pernas trabalhando. Baseada em referências do
+movimento real com escudo e de jogos:
 
-- base baixa, pé do lado do escudo à frente e joelhos dobrados;
-- escudo afastado do corpo (não colado), borda na altura do queixo, levemente
-  inclinado para desviar, cobrindo também a mão da espada;
-- defesa ativa: o escudo vai ao encontro do golpe pouco antes do impacto e
-  gira para jogar a lâmina para o lado;
-- no impacto, uma pausa curta, o braço cede, o tronco recua, os joelhos
-  absorvem e a cabeça se encolhe; a recuperação é mais lenta, para dar peso;
-- espada armada acima do escudo com a ponta à frente, e contra-ataque em
-  estocada com passo à frente enquanto o escudo afasta a arma do oponente;
-- guarda sustentada com respiração leve e volta à pose inicial.
+- o cavaleiro se põe de lado para o golpe: ombro do escudo à frente, ombro da
+  espada para trás;
+- as pernas montam a base: o pé do escudo gira para apontar ao oponente, o pé
+  da espada dá um passo para trás e para fora e fica virado de lado; base
+  larga, joelhos dobrados (apontando para onde os pés apontam) e quadril baixo;
+- escudo afastado do corpo, quase em pé, borda na altura do queixo; espada
+  armada junto à cabeça, ponta para a frente;
+- defesa ativa: o escudo vai ao encontro do golpe pouco antes do impacto;
+- no impacto, uma pausa curta; o escudo cede e gira para desviar, o peso vai
+  para a perna de trás (que dobra e segura), o pé da frente escorrega um pouco,
+  o tronco recua e a cabeça se encolhe; a recuperação é mais lenta;
+- guarda sustentada com respiração leve e, no fim, o pé de trás volta.
 
 Os dois `.glb` trazem as animações gravadas como clipes `Ataque` e `Defesa`
 (30 quadros por segundo, 15 articulações). Nos arquivos a capa vai presa ao tronco, sem o

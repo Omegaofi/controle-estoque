@@ -1,5 +1,5 @@
 // Animações do cavaleiro: ataque (corte horizontal) e defesa (bloqueio com
-// escudo seguido de contra-ataque em estocada). Um único motor toca os clipes.
+// escudo, de lado, com as pernas firmando a base). Um único motor toca os clipes.
 //
 // Pernas e braços usam cinemática inversa de dois ossos: a animação define
 // onde ficam os pés e as mãos, e os ângulos de quadril/joelho e ombro/cotovelo
@@ -60,70 +60,78 @@ export const ATAQUE = {
   },
 };
 
-// Defesa: bloqueio com escudo seguido de contra-ataque, a partir de referências
-// do movimento real e de jogos:
-// - Base baixa e firme, pé do lado do escudo à frente, joelhos dobrados.
-// - Escudo um pouco afastado do corpo (não colado), borda de cima na altura
-//   do queixo, inclinado para cobrir também a mão da espada; o cavaleiro olha
-//   por cima da borda.
-// - O escudo vai ao encontro do golpe pouco antes do impacto (defesa ativa) e
-//   gira para desviar a lâmina para o lado, em vez de só aparar de frente.
-// - No impacto: pequena pausa, o braço do escudo cede, o tronco recua e os
-//   joelhos absorvem; a recuperação é mais lenta, para dar peso.
-// - A espada fica armada acima do escudo, ponta para a frente, e responde com
-//   uma estocada curta enquanto o escudo afasta a arma do oponente (contra-
-//   ataque logo após o bloqueio, como o "guard counter" dos jogos).
-// - Depois segura a guarda com uma respiração leve, que é a pose que mais fica
-//   na tela, e baixa o escudo de volta à guarda inicial.
+// Defesa: só o bloqueio com escudo, sem contra-ataque, com trabalho de pernas.
+// Referências do movimento real e de jogos:
+// - O corpo fica de lado para o golpe: o ombro do escudo à frente e o da espada
+//   para trás, o que diminui a área exposta e põe o escudo entre os dois.
+// - As pernas montam a base para receber o impacto: o pé do escudo à frente,
+//   apontando para o oponente; o pé da espada recua para trás e para fora,
+//   virado de lado, abrindo uma base larga; joelhos dobrados e quadril baixo.
+// - Escudo um pouco afastado do corpo, borda na altura do queixo, quase em pé e
+//   levemente inclinado; o cavaleiro olha por cima da borda. A espada fica
+//   armada junto à cabeça, ponta para a frente, pronta mas sem atacar.
+// - O escudo vai ao encontro do golpe pouco antes do impacto (defesa ativa).
+// - No impacto: pequena pausa, o escudo cede e gira para desviar, o peso vai
+//   para a perna de trás (que dobra e segura), o pé da frente escorrega um
+//   pouco, o tronco recua e a cabeça se encolhe. A recuperação é mais lenta.
+// - Segura a guarda com uma respiração leve e recolhe o pé de trás no fim.
+const G = {
+  bacia: [0.01, -0.04, 0], yaw: 0.15, tronco: [0.1, 0.05, 0],
+  espada: [0.2, 0.08, 0.3], lamina: [0.05, 0.6, 0.8], escudo: [-0.17, 0.12, 0.3],
+  poloEspada: [0.35, -1, -0.25], poloEscudo: [-0.35, -1, -0.3],
+  peEspada: [0.17, -0.07, 0, 0.4], peEscudo: [-0.13, 0.12, 0, -0.05],
+};
+const B = {
+  bacia: [0.05, -0.09, -0.06], yaw: 0.6, tronco: [0.35, 0.08, 0],
+  espada: [0.09, 0.5, 0.12], lamina: [-0.81, 0.03, 0.58], escudo: [-0.28, 0.2, 0.24],
+  poloEspada: [0.7, -0.7, -0.1], poloEscudo: [-0.3, -0.5, -1],
+  peEspada: [0.22, -0.28, 0, 1.2], peEscudo: [-0.12, 0.16, 0, 0.2],
+};
 export const DEFESA = {
   name: 'Defesa',
-  duration: 3.0,
+  duration: 3.2,
   channels: {
     baciaPos: [
-      [0, 0.01, -0.04, 0], [0.2, 0.0, -0.08, -0.01], [0.5, 0.0, -0.08, -0.01], [0.56, 0.0, -0.08, 0.01],
-      [0.6, 0.0, -0.1, -0.04], [0.64, 0.0, -0.1, -0.04], [0.9, 0.0, -0.085, -0.015], [1.02, -0.01, -0.09, 0.03],
-      [1.16, -0.01, -0.1, 0.09], [1.28, -0.01, -0.1, 0.09], [1.55, 0.0, -0.08, -0.01], [1.9, 0.0, -0.075, -0.01],
-      [2.25, 0.0, -0.08, -0.01], [2.75, 0.01, -0.04, 0], [3.0, 0.01, -0.04, 0],
+      [0, ...G.bacia], [0.14, 0.03, -0.07, -0.03], [0.3, ...B.bacia], [0.5, 0.05, -0.085, -0.06], [0.7, ...B.bacia],
+      [0.74, 0.04, -0.09, -0.04], [0.79, 0.08, -0.115, -0.13], [0.84, 0.08, -0.115, -0.13], [1.3, ...B.bacia],
+      [1.75, 0.05, -0.083, -0.06], [2.2, ...B.bacia], [2.45, 0.03, -0.07, -0.03], [2.65, ...G.bacia], [3.2, ...G.bacia],
     ],
     baciaYaw: [
-      [0, 0.15], [0.2, 0.22], [0.5, 0.22], [0.56, 0.24], [0.6, 0.3], [0.64, 0.3], [0.9, 0.22],
-      [1.02, 0.1], [1.16, -0.12], [1.28, -0.12], [1.55, 0.22], [2.25, 0.22], [2.75, 0.15], [3.0, 0.15],
+      [0, G.yaw], [0.3, B.yaw], [0.7, B.yaw], [0.74, 0.57], [0.79, 0.68], [0.84, 0.68], [1.3, B.yaw], [2.2, B.yaw],
+      [2.65, G.yaw], [3.2, G.yaw],
     ],
     tronco: [
-      [0, 0.1, 0.05, 0], [0.2, 0.15, 0.1, 0], [0.5, 0.15, 0.1, 0], [0.56, 0.2, 0.12, 0],
-      [0.6, 0.3, -0.03, 0.02], [0.64, 0.3, -0.03, 0.02], [0.9, 0.15, 0.1, 0], [1.02, 0.05, 0.12, 0],
-      [1.16, -0.35, 0.14, -0.02], [1.28, -0.35, 0.14, -0.02], [1.55, 0.15, 0.1, 0], [1.9, 0.15, 0.085, 0],
-      [2.25, 0.15, 0.1, 0], [2.75, 0.1, 0.05, 0], [3.0, 0.1, 0.05, 0],
+      [0, ...G.tronco], [0.3, ...B.tronco], [0.7, ...B.tronco], [0.74, 0.32, 0.12, 0], [0.79, 0.45, -0.02, 0.02],
+      [0.84, 0.45, -0.02, 0.02], [1.3, ...B.tronco], [1.75, 0.35, 0.07, 0], [2.2, ...B.tronco], [2.65, ...G.tronco],
+      [3.2, ...G.tronco],
     ],
     cabeca: [
-      [0, 0, 0], [0.2, 0.05, 0], [0.56, 0.05, 0], [0.6, -0.08, -0.06], [0.64, -0.08, -0.06], [0.9, 0.05, 0],
-      [2.25, 0.05, 0], [2.75, 0, 0], [3.0, 0, 0],
+      [0, 0, 0], [0.3, 0.05, 0], [0.74, 0.05, 0], [0.79, -0.08, -0.06], [0.84, -0.08, -0.06], [1.3, 0.05, 0],
+      [2.2, 0.05, 0], [2.65, 0, 0], [3.2, 0, 0],
     ],
     maoEspada: [
-      [0, 0.2, 0.08, 0.3], [0.2, 0.16, 0.5, 0.3], [0.5, 0.16, 0.5, 0.3], [0.64, 0.16, 0.48, 0.28],
-      [0.9, 0.16, 0.5, 0.3], [1.02, 0.17, 0.5, 0.26], [1.16, 0.06, 0.36, 0.62], [1.28, 0.06, 0.36, 0.62],
-      [1.55, 0.16, 0.5, 0.3], [2.25, 0.16, 0.5, 0.3], [2.75, 0.2, 0.08, 0.3], [3.0, 0.2, 0.08, 0.3],
+      [0, ...G.espada], [0.3, ...B.espada], [0.74, ...B.espada], [0.79, 0.09, 0.48, 0.07], [0.84, 0.09, 0.48, 0.07],
+      [1.3, ...B.espada], [2.2, ...B.espada], [2.65, ...G.espada], [3.2, ...G.espada],
     ],
     lamina: [
-      [0, 0.05, 0.6, 0.8], [0.2, -0.12, 0.04, 0.99], [0.5, -0.12, 0.04, 0.99], [0.9, -0.12, 0.04, 0.99],
-      [1.02, -0.15, 0.0, 0.99], [1.16, -0.05, -0.06, 1], [1.28, -0.05, -0.06, 1], [1.55, -0.12, 0.04, 0.99],
-      [2.25, -0.12, 0.04, 0.99], [2.75, 0.05, 0.6, 0.8], [3.0, 0.05, 0.6, 0.8],
+      [0, ...G.lamina], [0.3, ...B.lamina], [2.2, ...B.lamina], [2.65, ...G.lamina], [3.2, ...G.lamina],
     ],
     maoEscudo: [
-      [0, -0.17, 0.12, 0.3], [0.2, -0.02, 0.22, 0.38], [0.5, -0.02, 0.22, 0.38], [0.56, -0.01, 0.23, 0.44],
-      [0.6, -0.08, 0.21, 0.32], [0.64, -0.08, 0.21, 0.32], [0.9, -0.02, 0.22, 0.38], [1.02, -0.04, 0.2, 0.4],
-      [1.16, -0.2, 0.14, 0.34], [1.28, -0.2, 0.14, 0.34], [1.55, -0.02, 0.22, 0.38], [1.9, -0.02, 0.225, 0.38],
-      [2.25, -0.02, 0.22, 0.38], [2.75, -0.17, 0.12, 0.3], [3.0, -0.17, 0.12, 0.3],
+      [0, ...G.escudo], [0.3, ...B.escudo], [0.5, -0.28, 0.205, 0.24], [0.7, ...B.escudo], [0.74, -0.28, 0.21, 0.3],
+      [0.79, -0.31, 0.19, 0.16], [0.84, -0.31, 0.19, 0.16], [1.3, ...B.escudo], [1.75, -0.28, 0.205, 0.24],
+      [2.2, ...B.escudo], [2.65, ...G.escudo], [3.2, ...G.escudo],
     ],
-    poloEspada: [[0, 0.35, -1, -0.25], [0.2, 0.7, -0.7, -0.1], [2.25, 0.7, -0.7, -0.1], [2.75, 0.35, -1, -0.25], [3.0, 0.35, -1, -0.25]],
-    poloEscudo: [[0, -0.35, -1, -0.3], [0.2, -0.7, -0.7, -0.2], [2.25, -0.7, -0.7, -0.2], [2.75, -0.35, -1, -0.3], [3.0, -0.35, -1, -0.3]],
+    poloEspada: [[0, ...G.poloEspada], [0.3, ...B.poloEspada], [2.2, ...B.poloEspada], [2.65, ...G.poloEspada], [3.2, ...G.poloEspada]],
+    poloEscudo: [[0, ...G.poloEscudo], [0.3, ...B.poloEscudo], [2.2, ...B.poloEscudo], [2.65, ...G.poloEscudo], [3.2, ...G.poloEscudo]],
+    // Pé da espada: passo para trás e para fora, girando de lado; volta no fim.
     peEspada: [
-      [0, 0.17, -0.07, 0, 0.4], [0.2, 0.18, -0.1, 0, 0.45], [2.25, 0.18, -0.1, 0, 0.45], [2.75, 0.17, -0.07, 0, 0.4], [3.0, 0.17, -0.07, 0, 0.4],
+      [0, ...G.peEspada], [0.15, 0.2, -0.18, 0.05, 0.8], [0.3, ...B.peEspada], [2.2, ...B.peEspada],
+      [2.42, 0.2, -0.18, 0.045, 0.8], [2.65, ...G.peEspada], [3.2, ...G.peEspada],
     ],
+    // Pé do escudo: gira no lugar para apontar ao oponente; escorrega no impacto.
     peEscudo: [
-      [0, -0.13, 0.12, 0, -0.05], [0.2, -0.14, 0.14, 0, -0.05], [1.0, -0.14, 0.14, 0, -0.05], [1.08, -0.14, 0.2, 0.04, -0.08],
-      [1.16, -0.14, 0.25, 0, -0.1], [1.35, -0.14, 0.25, 0, -0.1], [1.45, -0.14, 0.2, 0.035, -0.08], [1.55, -0.14, 0.14, 0, -0.05],
-      [2.25, -0.14, 0.14, 0, -0.05], [2.75, -0.13, 0.12, 0, -0.05], [3.0, -0.13, 0.12, 0, -0.05],
+      [0, ...G.peEscudo], [0.3, ...B.peEscudo], [0.79, ...B.peEscudo], [0.86, -0.12, 0.14, 0, 0.2],
+      [2.2, -0.12, 0.14, 0, 0.2], [2.65, ...G.peEscudo], [3.2, ...G.peEscudo],
     ],
   },
 };
