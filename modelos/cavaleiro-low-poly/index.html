@@ -12,7 +12,7 @@
     --fg: #1f261f;
     --muted: #5d6a5d;
     --line: #cfd7cc;
-    --accent: #2f8a3f;
+    --accent: #4a5d4e;
     --font-display: "Cinzel", "Trajan Pro", Georgia, serif;
     --font-body: "Karla", "Segoe UI", system-ui, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
@@ -20,12 +20,12 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #141814; --panel: #1b201b; --stage-top: #273027; --stage-bottom: #121612;
-      --fg: #e6ebe4; --muted: #9aa79a; --line: #2e372e; --accent: #5fbf6e; color-scheme: dark;
+      --fg: #e6ebe4; --muted: #9aa79a; --line: #2e372e; --accent: #7f9984; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #141814; --panel: #1b201b; --stage-top: #273027; --stage-bottom: #121612;
-    --fg: #e6ebe4; --muted: #9aa79a; --line: #2e372e; --accent: #5fbf6e; color-scheme: dark;
+    --fg: #e6ebe4; --muted: #9aa79a; --line: #2e372e; --accent: #7f9984; color-scheme: dark;
   }
   html, body { height: 100%; }
   body {
@@ -85,7 +85,7 @@
   <aside>
     <div>
       <h1>Cavaleiro Low Poly</h1>
-      <p class="lede">Proporções realistas, sem elmo e sem rosto (só os olhos), capa verde com bordado, escudo no braço direito e espada longa na mão esquerda. Corte horizontal com o corpo todo. Pixel art com sombreamento de desenho em 3 tons e contorno escuro.</p>
+      <p class="lede">Proporções realistas, sem elmo e sem rosto (só os olhos), capa verde com bordado, espada longa na mão direita e escudo no braço esquerdo. Cores sóbrias com textura simples. Corte horizontal com o corpo todo. Pixel art com sombreamento de desenho em 3 tons e contorno escuro.</p>
     </div>
     <div class="controls">
       <button id="attack" type="button" aria-pressed="true">Ataque</button>
@@ -171,7 +171,7 @@
 
   const ground = new THREE.Mesh(
     new THREE.CircleGeometry(1.4, 10),
-    Object.assign(new THREE.MeshToonMaterial({ color: 0x7d8f6f, gradientMap: toonRamp(THREE) }), { flatShading: true })
+    Object.assign(new THREE.MeshToonMaterial({ color: 0x676c60, gradientMap: toonRamp(THREE) }), { flatShading: true })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
@@ -214,7 +214,7 @@
     uniforms: {
       tScene: { value: lowRes.texture },
       texel: { value: new THREE.Vector2() },
-      bg: { value: new THREE.Color(0xb9c9b3) },
+      bg: { value: new THREE.Color(0xa9ada6) },
       ink: { value: new THREE.Color(0x15110e) },
       outline: { value: 1 },
     },

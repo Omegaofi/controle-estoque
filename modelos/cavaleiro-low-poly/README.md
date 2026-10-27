@@ -1,7 +1,7 @@
 # Cavaleiro low poly
 
 Cavaleiro low poly realista: sem elmo e sem rosto (só os olhos), com capa verde,
-escudo no braço direito e espada longa na mão esquerda. Proporções humanas
+espada longa na mão direita e escudo no braço esquerdo. Proporções humanas
 (1,80 m, cerca de 8 cabeças), em pose natural com o peso na perna esquerda.
 
 - **Conexões no corpo:** articulações de cota de malha em ombros, cotovelos,
@@ -16,10 +16,11 @@ escudo no braço direito e espada longa na mão esquerda. Proporções humanas
 - **Escudo e espada:** escudo curvo com aro de aço, rebites e correias no verso;
   espada com sulco na lâmina, anéis no cabo e bainha presa ao cinto.
 
-**Animação de ataque** (`ataque.js`, 2,4 s em loop): corte horizontal com a
-espada que varre da direita para a esquerda de quem olha o cavaleiro de frente.
+**Animação de ataque** (`ataque.js`, 2,4 s em loop): corte horizontal de
+direita com a espada, que varre da direita para a esquerda do cavaleiro (na
+tela, de quem olha de frente, vai da esquerda para a direita).
 O corpo todo participa: guarda, recuo com o tronco torcido (cerca de 65° entre
-bacia e tronco), passo à frente com o pé direito, giro do quadril e do tronco
+bacia e tronco), passo à frente com o pé esquerdo, giro do quadril e do tronco
 no golpe, acompanhamento e volta à guarda. Pernas e braços usam cinemática
 inversa de dois ossos, então os pés ficam no chão e as mãos seguem a trajetória.
 A cabeça compensa o giro para manter o olhar no alvo, o escudo abre caminho
@@ -29,7 +30,12 @@ Os dois `.glb` trazem a animação gravada como clipe `Ataque` (30 quadros por
 segundo, 15 articulações). Nos arquivos a capa vai presa ao tronco, sem o
 atraso do tecido que o visualizador simula.
 
-Cerca de 11.000 triângulos (237 peças), sombreamento chapado (flat) e 15 cores sólidas, sem textura de imagem.
+Cerca de 11.000 triângulos (237 peças), sombreamento chapado (flat) e paleta
+sóbria de 14 cores dessaturadas. Cada material tem uma textura simples de
+64×64 gerada por código, em tons de cinza que multiplicam a cor: aço escovado
+com riscos, anéis de cota de malha, lã em sarja, couro, veio de madeira,
+pintura gasta, fios de cabelo e ponto de bordado. As UVs são de mapeamento em
+caixa (uma repetição a cada 0,2 m), e as texturas vão embutidas nos `.glb`.
 
 No visualizador o personagem aparece em estilo pixel art: sombreamento de desenho
 (toon) em 3 tons, contorno escuro por casco invertido e renderização em baixa

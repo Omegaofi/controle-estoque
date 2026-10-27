@@ -1,28 +1,29 @@
 // Cavaleiro low poly realista: sem elmo e sem rosto (só os olhos), capa verde,
-// escudo no braço direito. Proporções humanas (1,80 m, ~8 cabeças), armadura de
+// espada na mão direita e escudo no braço esquerdo. Cores sóbrias com textura
+// simples gerada por código (metal escovado, malha, lã, couro, madeira). Proporções humanas (1,80 m, ~8 cabeças), armadura de
 // placas sobre cota de malha, com articulações, correias e rebites ligando as peças.
 // Recebe o módulo THREE e devolve um THREE.Group com pés em y = 0, olhando para +Z.
 // Cores chapadas, sem textura de imagem.
 
 export const PALETTE = {
-  pele: 0xc6927a,
-  cabelo: 0x3a2a1f,
-  aco: 0x939aa3,
-  acoEscuro: 0x5e646c,
-  malha: 0x4a4f55,
-  capa: 0x2f6a3a,
-  capaInterna: 0x234f2b,
-  couro: 0x5a3c26,
-  latao: 0xa8843f,
-  madeira: 0x6b5034,
-  escudoFace: 0xd8ceb2,
-  lamina: 0xbcc3cb,
-  olho: 0x1e1a18,
-  bordado: 0xc29a45,
+  pele: 0xae8a77,
+  cabelo: 0x2e2620,
+  aco: 0x80868d,
+  acoEscuro: 0x50555b,
+  malha: 0x42464b,
+  capa: 0x37493b,
+  capaInterna: 0x27332a,
+  couro: 0x4a3a2e,
+  latao: 0x8a7752,
+  madeira: 0x5a4838,
+  escudoFace: 0xa7a18e,
+  lamina: 0xa2a8ad,
+  olho: 0x1a1817,
+  bordado: 0x7b6d4d,
 };
 
 // Rampa de 3 tons para o sombreamento de desenho (cel shading).
-export function toonRamp(THREE, steps = [70, 160, 255]) {
+export function toonRamp(THREE, steps = [92, 168, 238]) {
   const data = new Uint8Array(steps.length * 4);
   steps.forEach((v, i) => data.set([v, v, v, 255], i * 4));
   const tex = new THREE.DataTexture(data, steps.length, 1, THREE.RGBAFormat);
@@ -130,6 +131,137 @@ function polyGeo(THREE, verts, faces) {
   return g;
 }
 
+// ---------- Texturas ----------
+// Texturas pequenas (64×64) em tons de cinza que multiplicam a cor do material:
+// a cor continua vindo da paleta e a textura só dá o "grão" de cada superfície.
+// Repetem a cada 0,2 m (ver boxUV).
+const TEX = 64;
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// Ruído de valor que fecha nas bordas (a textura repete sem emenda).
+function valueNoise(seed, cells) {
+  const r = rng(seed);
+  const g = Array.from({ length: cells * cells }, r);
+  const at = (i, j) => g[((j % cells) + cells) % cells * cells + (((i % cells) + cells) % cells)];
+  return (x, y) => {
+    const fx = (x / TEX) * cells, fy = (y / TEX) * cells;
+    const i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j;
+    const su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+    const a = at(i, j) + (at(i + 1, j) - at(i, j)) * su;
+    const b = at(i, j + 1) + (at(i + 1, j + 1) - at(i, j + 1)) * su;
+    return a + (b - a) * sv;
+  };
+}
+const PATTERNS = {
+  metal(seed) {
+    const r = rng(seed), n = valueNoise(seed, 8), streak = valueNoise(seed + 1, 32);
+    const scratches = Array.from({ length: 7 }, () => [r() * TEX, r() * TEX, 4 + r() * 8]);
+    return (x, y) => {
+      let v = 0.9 + 0.06 * n(x, y) + 0.05 * (streak(x * 0.15, y) - 0.5);
+      for (const [sx, sy, len] of scratches) {
+        const dx = (x - sx + TEX) % TEX, dy = (y - sy + TEX) % TEX;
+        if (dx < len && Math.abs(dy - dx * 0.4) < 0.6) v -= 0.12;
+      }
+      return v;
+    };
+  },
+  malha(seed) {
+    const n = valueNoise(seed, 8);
+    return (x, y) => {
+      const row = Math.floor(y / 4);
+      const cx = ((x + (row % 2) * 2) % 4) - 1.5, cy = (y % 4) - 1.5;
+      const d = Math.hypot(cx, cy);
+      return (d > 0.9 && d < 2.0 ? 1.0 : 0.6) - 0.08 * n(x, y);
+    };
+  },
+  la(seed) {
+    const n = valueNoise(seed, 16);
+    return (x, y) => 0.9 + ((x + y) % 4 < 2 ? 0.05 : -0.04) + 0.06 * (n(x, y) - 0.5);
+  },
+  couro(seed) {
+    const n = valueNoise(seed, 6), m = valueNoise(seed + 3, 32);
+    return (x, y) => 0.84 + 0.12 * n(x, y) + 0.06 * (m(x, y) - 0.5);
+  },
+  madeira(seed) {
+    const n = valueNoise(seed, 4);
+    return (x, y) => 0.86 + 0.1 * Math.sin(x * 0.8 + n(x, y) * 9) + 0.03 * n(y, x);
+  },
+  pintura(seed) {
+    const n = valueNoise(seed, 8), chip = valueNoise(seed + 5, 16);
+    return (x, y) => (chip(x, y) > 0.82 ? 0.78 : 0.93 + 0.05 * n(x, y));
+  },
+  cabelo(seed) {
+    const n = valueNoise(seed, 32);
+    return (x, y) => 0.8 + 0.2 * n(x * 1, y * 0.15);
+  },
+  bordado(seed) {
+    const n = valueNoise(seed, 8);
+    return (x, y) => ((x + (Math.floor(y / 3) % 2) * 2) % 4 < 3 && y % 3 !== 0 ? 1.0 : 0.72) - 0.06 * n(x, y);
+  },
+  fino(seed) {
+    const n = valueNoise(seed, 8);
+    return (x, y) => 0.94 + 0.06 * n(x, y);
+  },
+};
+const MATERIAL_PATTERN = {
+  aco: 'metal', acoEscuro: 'metal', lamina: 'metal', malha: 'malha', capa: 'la', capaInterna: 'la',
+  couro: 'couro', madeira: 'madeira', escudoFace: 'pintura', cabelo: 'cabelo', bordado: 'bordado',
+  latao: 'fino', pele: 'fino',
+};
+export function makeTexture(THREE, pattern, seed = 1) {
+  const f = PATTERNS[pattern](seed);
+  const data = new Uint8Array(TEX * TEX * 4);
+  for (let y = 0; y < TEX; y++) {
+    for (let x = 0; x < TEX; x++) {
+      const v = Math.round(255 * Math.min(1, Math.max(0, f(x, y))));
+      data.set([v, v, v, 255], (y * TEX + x) * 4);
+    }
+  }
+  const tex = new THREE.DataTexture(data, TEX, TEX, THREE.RGBAFormat);
+  tex.name = pattern;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.generateMipmaps = true;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+// Mapeamento em caixa: cada triângulo projeta no plano do eixo mais próximo da
+// sua normal, em metros (já com a escala da peça), uma repetição a cada 0,2 m.
+const UV_TILE = 0.2;
+function boxUV(THREE, geometry, scale) {
+  const g = geometry.index ? geometry.toNonIndexed() : geometry.clone();
+  const p = g.attributes.position;
+  const uv = new Float32Array(p.count * 2);
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+  const s = new THREE.Vector3(...scale);
+  for (let i = 0; i < p.count; i += 3) {
+    a.fromBufferAttribute(p, i).multiply(s);
+    b.fromBufferAttribute(p, i + 1).multiply(s);
+    c.fromBufferAttribute(p, i + 2).multiply(s);
+    n.subVectors(c, b).cross(new THREE.Vector3().subVectors(a, b));
+    const ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z);
+    for (const [k, v] of [[0, a], [1, b], [2, c]]) {
+      const [u, w] = ax >= ay && ax >= az ? [v.z, v.y] : ay >= az ? [v.x, v.z] : [v.x, v.y];
+      uv[(i + k) * 2] = u / UV_TILE;
+      uv[(i + k) * 2 + 1] = w / UV_TILE;
+    }
+  }
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.computeVertexNormals();
+  return g;
+}
+
 // ---------- Personagem ----------
 
 // options.toon = true usa MeshToonMaterial em faixas; senão MeshStandardMaterial (exportação).
@@ -137,12 +269,16 @@ export function buildKnight(THREE, options = {}) {
   const ramp = options.toon ? toonRamp(THREE) : null;
   const shiny = new Set(['aco', 'acoEscuro', 'lamina', 'latao', 'bordado']);
   const mats = {};
+  const textures = {};
+  let seed = 1;
+  for (const [name, pattern] of Object.entries(MATERIAL_PATTERN)) textures[name] = makeTexture(THREE, pattern, seed++);
   for (const [name, color] of Object.entries(PALETTE)) {
     mats[name] = ramp
-      ? Object.assign(new THREE.MeshToonMaterial({ name, color, gradientMap: ramp }), { flatShading: true })
+      ? Object.assign(new THREE.MeshToonMaterial({ name, color, gradientMap: ramp, map: textures[name] ?? null }), { flatShading: true })
       : new THREE.MeshStandardMaterial({
           name,
           color,
+          map: textures[name] ?? null,
           flatShading: true,
           roughness: shiny.has(name) ? 0.42 : 0.9,
           metalness: shiny.has(name) ? 0.45 : 0.0,
@@ -155,8 +291,11 @@ export function buildKnight(THREE, options = {}) {
   const knight = new THREE.Group();
   knight.name = 'Cavaleiro';
 
+  // Geometrias compartilhadas (rebites, capa e forro) ganham UV uma vez só.
+  const uvCache = new Map();
   function mesh(name, geometry, mat, parent, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 1, 1], opts = {}) {
-    const m = new THREE.Mesh(geometry, mats[mat]);
+    if (!uvCache.has(geometry)) uvCache.set(geometry, boxUV(THREE, geometry, scale));
+    const m = new THREE.Mesh(uvCache.get(geometry), mats[mat]);
     m.name = name;
     m.position.set(...pos);
     m.rotation.set(...rot);
@@ -465,16 +604,19 @@ export function buildKnight(THREE, options = {}) {
       mesh(`PlacaDedo${L}${i + 1}`, new THREE.BoxGeometry(0.016, 0.022, 0.006), 'acoEscuro', fist,
         [-0.028 + i * 0.019, -0.094 + Math.abs(i - 1.5) * 0.003, 0.015], [0.35, 0, 0], [1, 1, 1], detail);
     }
-    mesh(`Polegar${L}`, new THREE.BoxGeometry(0.018, 0.048, 0.019), 'couro', fist, [-0.042, -0.06, -0.016], [0.2, 0, 0.5]);
+    mesh(`Polegar${L}`, new THREE.BoxGeometry(0.018, 0.048, 0.019), 'couro', fist, [-0.042 * side, -0.06, -0.016], [0.2, 0, 0.5 * side]);
     return { shoulder, elbow, hand };
   }
 
-  // Direito: antebraço à frente, segurando o escudo.
-  const right = arm(-1, [-0.32, 0, -0.16], [-1.12, 0, 0], [0, 0, 0]);
-  // Esquerdo: braço caído ao lado, segurando a espada.
-  const left = arm(1, [-0.08, 0, 0.13], [-0.5, 0, 0], [0, 0, 0]);
+  // Lado da espada: -1 = mão direita. O escudo fica no outro braço.
+  const SWORD = -1, SHIELD = -SWORD;
+  // Braço da espada caído ao lado; braço do escudo com o antebraço à frente.
+  const swordArm = arm(SWORD, [-0.08, 0, 0.13 * SWORD], [-0.5, 0, 0], [0, 0, 0]);
+  const shieldArm = arm(SHIELD, [-0.32, 0, 0.16 * SHIELD], [-1.12, 0, 0], [0, 0, 0]);
+  const left = SWORD === 1 ? swordArm : shieldArm;
+  const right = SWORD === 1 ? shieldArm : swordArm;
 
-  // ---------- Escudo (heater) curvo no antebraço direito ----------
+  // ---------- Escudo (heater) curvo no antebraço do escudo ----------
   const shield = new THREE.Group();
   shield.name = 'Escudo';
   const top = 0.28, tip = -0.38, half = 0.24, curve = 0.055, thick = 0.018;
@@ -509,23 +651,23 @@ export function buildKnight(THREE, options = {}) {
     rivet(shield, x, y, zf(x) + 0.006, 1.2);
   }
   // Correias (enarmes) e almofada no verso, por onde passa o antebraço.
-  mesh('EscudoAlca1', new THREE.BoxGeometry(0.03, 0.17, 0.01), 'couro', shield, [-0.02, 0.07, -thick - 0.006], [0, 0, 0.95], [1, 1, 1], detail);
-  mesh('EscudoAlca2', new THREE.BoxGeometry(0.03, 0.17, 0.01), 'couro', shield, [0.03, -0.07, -thick - 0.006], [0, 0, 0.95], [1, 1, 1], detail);
-  mesh('EscudoAlmofada', new THREE.BoxGeometry(0.1, 0.12, 0.012), 'couro', shield, [0, 0, -thick - 0.004], [0, 0, 0.95], [1, 1, 1], detail);
+  mesh('EscudoAlca1', new THREE.BoxGeometry(0.03, 0.17, 0.01), 'couro', shield, [-0.02 * -SHIELD, 0.07, -thick - 0.006], [0, 0, -0.95 * SHIELD], [1, 1, 1], detail);
+  mesh('EscudoAlca2', new THREE.BoxGeometry(0.03, 0.17, 0.01), 'couro', shield, [0.03 * -SHIELD, -0.07, -thick - 0.006], [0, 0, -0.95 * SHIELD], [1, 1, 1], detail);
+  mesh('EscudoAlmofada', new THREE.BoxGeometry(0.1, 0.12, 0.012), 'couro', shield, [0, 0, -thick - 0.004], [0, 0, -0.95 * SHIELD], [1, 1, 1], detail);
 
   knight.updateMatrixWorld(true);
-  const forearmMid = right.elbow.localToWorld(new THREE.Vector3(0, -0.13, 0));
+  const forearmMid = shieldArm.elbow.localToWorld(new THREE.Vector3(0, -0.13, 0));
   // A face do escudo fica paralela ao antebraço, voltada para fora e um pouco à frente.
-  const forearmDir = right.elbow.localToWorld(new THREE.Vector3(0, -1, 0)).sub(right.elbow.getWorldPosition(new THREE.Vector3())).normalize();
-  const front = new THREE.Vector3(-1, 0.02, 0.3).projectOnPlane(forearmDir).normalize();
-  const upW = new THREE.Vector3(0.06, 1, 0);
+  const forearmDir = shieldArm.elbow.localToWorld(new THREE.Vector3(0, -1, 0)).sub(shieldArm.elbow.getWorldPosition(new THREE.Vector3())).normalize();
+  const front = new THREE.Vector3(SHIELD, 0.02, 0.3).projectOnPlane(forearmDir).normalize();
+  const upW = new THREE.Vector3(-0.06 * SHIELD, 1, 0);
   const xAxis = new THREE.Vector3().crossVectors(upW, front).normalize();
   const yAxis = new THREE.Vector3().crossVectors(front, xAxis);
   const shieldQuat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, yAxis, front));
   const shieldPos = forearmMid.clone().addScaledVector(front, 0.08).addScaledVector(yAxis, -0.03);
-  attachWorld(shield, right.elbow, shieldPos, shieldQuat);
+  attachWorld(shield, shieldArm.elbow, shieldPos, shieldQuat);
 
-  // ---------- Espada longa na mão esquerda ----------
+  // ---------- Espada longa na mão da espada ----------
   const sword = new THREE.Group();
   sword.name = 'Espada';
   const blade = [];
@@ -555,10 +697,10 @@ export function buildKnight(THREE, options = {}) {
   mesh('Pomo', new THREE.CylinderGeometry(0.028, 0.028, 0.02, 8), 'latao', sword, [0, 0.12, 0], [0, 0, Math.PI / 2]);
 
   knight.updateMatrixWorld(true);
-  const gripPos = left.hand.localToWorld(new THREE.Vector3(0, -0.06, 0.005));
-  const bladeDir = new THREE.Vector3(0.05, -0.78, 0.48).normalize();
+  const gripPos = swordArm.hand.localToWorld(new THREE.Vector3(0, -0.06, 0.005));
+  const bladeDir = new THREE.Vector3(0.05 * SWORD, -0.78, 0.48).normalize();
   const swordQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), bladeDir);
-  attachWorld(sword, left.hand, gripPos, swordQuat);
+  attachWorld(sword, swordArm.hand, gripPos, swordQuat);
 
   // ---------- Bainha no quadril esquerdo, presa ao cinto ----------
   const scabbard = group('Bainha', knight, [0.18, 0.93, 0.05]);
@@ -657,7 +799,7 @@ export function buildKnight(THREE, options = {}) {
     value: {
       bacia, tronco, cabeca: head, legs,
       arms: { 1: left, [-1]: right },
-      espada: sword,
+      espada: sword, swordSide: SWORD,
       upperArm: 0.3, forearm: 0.25,
     },
   });

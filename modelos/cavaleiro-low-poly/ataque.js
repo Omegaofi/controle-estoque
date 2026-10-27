@@ -1,15 +1,18 @@
-// Animação de ataque: corte horizontal com a espada (mão esquerda), varrendo
-// da direita para a esquerda de quem olha o cavaleiro de frente (do lado
-// esquerdo dele para o direito). O golpe nasce no quadril: a bacia e o tronco
-// giram, o pé direito dá um passo à frente, a cabeça mantém o olhar no alvo,
-// o escudo abre caminho e a capa segue o tronco com atraso.
+// Animação de ataque: corte horizontal de direita (golpe de frente, com a mão
+// da espada), varrendo do lado da espada para o lado do escudo. Com a espada
+// na mão direita, a lâmina vai da direita para a esquerda do cavaleiro. O golpe
+// nasce no quadril: a bacia e o tronco giram, o pé do lado do escudo dá um
+// passo à frente, a cabeça mantém o olhar no alvo, o escudo abre caminho e a
+// capa segue o tronco com atraso.
 //
 // Pernas e braços usam cinemática inversa de dois ossos: a animação define
 // onde ficam os pés e as mãos, e os ângulos de quadril/joelho e ombro/cotovelo
 // são calculados a cada quadro.
 
 // Canais da animação: [tempo (s), ...valores]. Interpolação cúbica entre chaves.
-// Coordenadas: +x = lado esquerdo do cavaleiro, +y = cima, +z = frente.
+// As chaves foram escritas com a espada no lado +x; com a espada no outro lado
+// (rig.swordSide = -1) tudo é espelhado: x e giros trocam de sinal.
+// Coordenadas: +x = lado do cavaleiro onde está a espada (nas chaves), +y = cima, +z = frente.
 // Bacia: deslocamento [x, y, z] a partir da pose original e giro (yaw).
 // Tronco: [giro, inclinação à frente, inclinação lateral] sobre a cintura.
 // Mãos: posição do pulso no espaço do tronco (origem na cintura). Como o tronco
@@ -29,7 +32,7 @@ const CHANNELS = {
     [0, 0.1, 0.05, 0], [0.42, 0.75, -0.03, 0.05], [0.55, 0.45, 0.03, 0.02], [0.63, 0, 0.08, 0],
     [0.71, -0.5, 0.1, -0.03], [0.86, -0.8, 0.1, -0.05], [1.1, -0.72, 0.08, -0.04], [1.75, 0.1, 0.05, 0], [2.4, 0.1, 0.05, 0],
   ],
-  maoEsq: [
+  maoEspada: [
     [0, 0.2, 0.08, 0.3], [0.42, 0.38, 0.16, -0.01], [0.55, 0.27, 0.14, 0.39], [0.63, 0.2, 0.13, 0.48],
     [0.71, 0.13, 0.11, 0.47], [0.86, -0.11, 0.03, 0.39], [1.1, -0.13, 0.02, 0.33], [1.75, 0.2, 0.08, 0.3], [2.4, 0.2, 0.08, 0.3],
   ],
@@ -37,15 +40,15 @@ const CHANNELS = {
     [0, 0.05, 0.6, 0.8], [0.42, 0.99, 0.1, -0.06], [0.55, 0.58, 0.02, 0.81], [0.63, 0.25, -0.02, 0.98],
     [0.71, -0.23, -0.05, 0.96], [0.86, -0.92, -0.25, 0.27], [1.1, -0.82, -0.35, 0.23], [1.75, 0.05, 0.6, 0.8], [2.4, 0.05, 0.6, 0.8],
   ],
-  maoDir: [
+  maoEscudo: [
     [0, -0.17, 0.12, 0.3], [0.42, -0.12, 0.12, 0.32], [0.55, -0.25, 0.1, 0.2], [0.63, -0.33, 0.1, 0.05],
     [0.71, -0.36, 0.08, -0.02], [0.86, -0.34, 0.1, 0], [1.1, -0.3, 0.1, 0.05], [1.75, -0.17, 0.12, 0.3], [2.4, -0.17, 0.12, 0.3],
   ],
-  peEsq: [
+  peEspada: [
     [0, 0.17, -0.07, 0, 0.4], [0.71, 0.17, -0.07, 0, 0.4], [0.86, 0.17, -0.07, 0, 0.1], [1.1, 0.17, -0.07, 0, 0.1],
     [1.75, 0.17, -0.07, 0, 0.4], [2.4, 0.17, -0.07, 0, 0.4],
   ],
-  peDir: [
+  peEscudo: [
     [0, -0.13, 0.12, 0, -0.05], [0.4, -0.13, 0.12, 0, -0.05], [0.5, -0.14, 0.19, 0.055, -0.1], [0.6, -0.15, 0.26, 0, -0.15],
     [1.3, -0.15, 0.26, 0, -0.15], [1.45, -0.14, 0.19, 0.045, -0.1], [1.6, -0.13, 0.12, 0, -0.05], [2.4, -0.13, 0.12, 0, -0.05],
   ],
@@ -165,9 +168,12 @@ export function createAttack(THREE, knight, { deformCape = true } = {}) {
 
   function pose(t, dt) {
     t = ((t % DURATION) + DURATION) % DURATION;
-    const [px, py, pz] = sample(CHANNELS.baciaPos, t);
-    const [byaw] = sample(CHANNELS.baciaYaw, t);
-    const [tyaw, tpitch, troll] = sample(CHANNELS.tronco, t);
+    const M = rig.swordSide ?? 1;
+    const [px0, py, pz] = sample(CHANNELS.baciaPos, t);
+    const px = px0 * M;
+    const byaw = sample(CHANNELS.baciaYaw, t)[0] * M;
+    const [tyaw0, tpitch, troll0] = sample(CHANNELS.tronco, t);
+    const tyaw = tyaw0 * M, troll = troll0 * M;
 
     rig.bacia.position.set(baciaRest.x + px, baciaRest.y + py, baciaRest.z + pz);
     rig.bacia.rotation.set(0, byaw, 0);
@@ -178,7 +184,8 @@ export function createAttack(THREE, knight, { deformCape = true } = {}) {
     // Pés no chão e pernas por IK.
     for (const side of [1, -1]) {
       const leg = rig.legs[side];
-      const [fx, fz, lift, yaw] = sample(side === 1 ? CHANNELS.peEsq : CHANNELS.peDir, t);
+      const [fx0, fz, lift, yaw0] = sample(side === M ? CHANNELS.peEspada : CHANNELS.peEscudo, t);
+      const fx = fx0 * M, yaw = yaw0 * M;
       leg.foot.position.set(fx, 0.024 + lift, fz);
       leg.foot.rotation.set(Math.PI / 2, yaw, 0, 'YXZ');
       knight.updateMatrixWorld(true);
@@ -191,18 +198,18 @@ export function createAttack(THREE, knight, { deformCape = true } = {}) {
     }
 
     // Braços por IK no espaço do tronco.
-    const left = rig.arms[1], right = rig.arms[-1];
-    const [lx, ly, lz] = sample(CHANNELS.maoEsq, t);
-    d.set(lx, ly, lz).sub(left.shoulder.position);
-    twoBone(left.shoulder, left.elbow, rig.upperArm, rig.forearm, d, pole.set(0.35, -1, -0.25), -1);
-    const [rx, ry, rz] = sample(CHANNELS.maoDir, t);
-    d.set(rx, ry, rz).sub(right.shoulder.position);
-    twoBone(right.shoulder, right.elbow, rig.upperArm, rig.forearm, d, pole.set(-0.35, -1, -0.3), -1);
+    const swordArm = rig.arms[M], shieldArm = rig.arms[-M];
+    const [lx, ly, lz] = sample(CHANNELS.maoEspada, t);
+    d.set(lx * M, ly, lz).sub(swordArm.shoulder.position);
+    twoBone(swordArm.shoulder, swordArm.elbow, rig.upperArm, rig.forearm, d, pole.set(0.35 * M, -1, -0.25), -1);
+    const [rx, ry, rz] = sample(CHANNELS.maoEscudo, t);
+    d.set(rx * M, ry, rz).sub(shieldArm.shoulder.position);
+    twoBone(shieldArm.shoulder, shieldArm.elbow, rig.upperArm, rig.forearm, d, pole.set(-0.35 * M, -1, -0.3), -1);
 
     // Orientação da espada: ponta na direção da lâmina, face plana para cima
     // (gume na frente do movimento), convertida para a rotação do pulso.
     const [ax, ay, az] = sample(CHANNELS.lamina, t);
-    by.set(-ax, -ay, -az).normalize(); // o eixo +y local da espada aponta para o pomo
+    by.set(-ax * M, -ay, -az).normalize(); // o eixo +y local da espada aponta para o pomo
     tmp.set(0, 1, 0);
     bz.copy(tmp).addScaledVector(by, -tmp.dot(by));
     if (bz.lengthSq() < 1e-6) bz.set(0, 0, 1);
@@ -212,9 +219,9 @@ export function createAttack(THREE, knight, { deformCape = true } = {}) {
     knight.updateMatrixWorld(true);
     rig.tronco.getWorldQuaternion(qWorld);
     qWorld.multiply(qSword).multiply(swordLocalInv);
-    left.elbow.getWorldQuaternion(qInv).invert();
-    left.hand.quaternion.copy(qInv.multiply(qWorld));
-    right.hand.quaternion.identity();
+    swordArm.elbow.getWorldQuaternion(qInv).invert();
+    swordArm.hand.quaternion.copy(qInv.multiply(qWorld));
+    shieldArm.hand.quaternion.identity();
 
     knight.updateMatrixWorld(true);
     updateCape(dt);
