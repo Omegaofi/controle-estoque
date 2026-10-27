@@ -85,7 +85,7 @@
   <aside>
     <div>
       <h1>Cavaleiro Low Poly</h1>
-      <p class="lede">Sem elmo, capa verde, escudo no braço direito e espada na mão esquerda. Pixel art com sombreamento de desenho em 3 tons e contorno escuro.</p>
+      <p class="lede">Proporções realistas, sem elmo, capa verde, escudo no braço direito e espada longa na mão esquerda. Pixel art com sombreamento de desenho em 3 tons e contorno escuro.</p>
     </div>
     <div class="controls">
       <button id="spin" type="button" aria-pressed="true">Girar sozinho</button>
@@ -95,8 +95,8 @@
     </div>
     <div class="range">
       <label for="pixel-size">Tamanho do pixel</label>
-      <output id="pixel-size-out" for="pixel-size">5 px</output>
-      <input id="pixel-size" type="range" min="2" max="10" step="1" value="5">
+      <output id="pixel-size-out" for="pixel-size">4 px</output>
+      <input id="pixel-size" type="range" min="2" max="10" step="1" value="4">
     </div>
     <section>
       <h2>Ficha técnica</h2>
@@ -136,9 +136,10 @@
   import { buildKnight, addOutline, toonRamp, PALETTE } from './knight.js';
 
   const LABELS = {
-    pele: 'Pele', cabelo: 'Cabelo e barba', aco: 'Aço claro', acoEscuro: 'Aço escuro',
-    capa: 'Capa verde', capaInterna: 'Gola da capa', couro: 'Couro', bota: 'Botas',
-    ouro: 'Detalhes dourados', escudoFace: 'Face do escudo', lamina: 'Lâmina', olho: 'Olhos',
+    pele: 'Pele', cabelo: 'Cabelo e barba', aco: 'Aço', acoEscuro: 'Aço escurecido',
+    malha: 'Cota de malha', capa: 'Capa verde', capaInterna: 'Forro da capa', couro: 'Couro',
+    latao: 'Latão', madeira: 'Madeira do escudo', escudoFace: 'Pintura do escudo', lamina: 'Lâmina',
+    olho: 'Olhos', labio: 'Lábios',
   };
 
   const stage = document.getElementById('stage');
@@ -184,7 +185,7 @@
     verts += g.attributes.position.count;
     tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
   });
-  const outlineMat = addOutline(THREE, knight, 0.016);
+  const outlineMat = addOutline(THREE, knight, 0.012);
   scene.add(knight);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -230,7 +231,7 @@
   const screenScene = new THREE.Scene();
   screenScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), pixelMat));
   const screenCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  let pixelSize = 5, pixelOn = true;
+  let pixelSize = 4, pixelOn = true;
 
   const box = new THREE.Box3().setFromObject(knight);
   const fmt = n => n.toLocaleString('pt-BR');

@@ -1,7 +1,10 @@
 # Cavaleiro low poly
 
-Cavaleiro sem elmo, com capa verde, escudo no braço direito e espada na mão esquerda.
-Cerca de 1.000 triângulos, sombreamento chapado (flat) e 12 cores sólidas, sem textura de imagem.
+Cavaleiro low poly realista: sem elmo, com capa verde, escudo no braço direito e espada
+longa na mão esquerda. Proporções humanas (1,80 m, cerca de 8 cabeças de altura),
+armadura de placas (couraça, espaldares, braçais, coxotes, joelheiras, grevas e
+escarpes) sobre cota de malha, rosto com mandíbula, nariz, barba curta e cabelo.
+Cerca de 4.000 triângulos, sombreamento chapado (flat) e 14 cores sólidas, sem textura de imagem.
 
 No visualizador o personagem aparece em estilo pixel art: sombreamento de desenho
 (toon) em 3 tons, contorno escuro por casco invertido e renderização em baixa

@@ -1,5 +1,5 @@
 newmtl pele
-Kd 0.8863 0.6784 0.5176
+Kd 0.7765 0.5725 0.4784
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -7,7 +7,7 @@ d 1
 illum 2
 
 newmtl cabelo
-Kd 0.3569 0.2275 0.1333
+Kd 0.2275 0.1647 0.1216
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -15,7 +15,7 @@ d 1
 illum 2
 
 newmtl aco
-Kd 0.6549 0.6902 0.7294
+Kd 0.5765 0.6039 0.6392
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -23,7 +23,15 @@ d 1
 illum 2
 
 newmtl acoEscuro
-Kd 0.4275 0.4627 0.5059
+Kd 0.3686 0.3922 0.4235
+Ka 0 0 0
+Ks 0.1 0.1 0.1
+Ns 10
+d 1
+illum 2
+
+newmtl malha
+Kd 0.2902 0.3098 0.3333
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -31,7 +39,7 @@ d 1
 illum 2
 
 newmtl capa
-Kd 0.1843 0.5412 0.2471
+Kd 0.1843 0.4157 0.2275
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -39,7 +47,7 @@ d 1
 illum 2
 
 newmtl capaInterna
-Kd 0.1216 0.3686 0.1686
+Kd 0.1373 0.3098 0.1686
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -47,23 +55,23 @@ d 1
 illum 2
 
 newmtl couro
-Kd 0.4196 0.2667 0.1490
+Kd 0.3529 0.2353 0.1490
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
 d 1
 illum 2
 
-newmtl bota
-Kd 0.2471 0.1647 0.1098
+newmtl latao
+Kd 0.6588 0.5176 0.2471
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
 d 1
 illum 2
 
-newmtl ouro
-Kd 0.7882 0.6353 0.2275
+newmtl madeira
+Kd 0.4196 0.3137 0.2039
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -71,7 +79,7 @@ d 1
 illum 2
 
 newmtl escudoFace
-Kd 0.9137 0.8824 0.8000
+Kd 0.8471 0.8078 0.6980
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -79,7 +87,7 @@ d 1
 illum 2
 
 newmtl lamina
-Kd 0.8275 0.8549 0.8824
+Kd 0.7373 0.7647 0.7961
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -87,7 +95,15 @@ d 1
 illum 2
 
 newmtl olho
-Kd 0.1137 0.1059 0.1020
+Kd 0.1647 0.1373 0.1255
+Ka 0 0 0
+Ks 0.1 0.1 0.1
+Ns 10
+d 1
+illum 2
+
+newmtl labio
+Kd 0.6039 0.3922 0.3216
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10

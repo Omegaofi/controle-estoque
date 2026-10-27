@@ -16,7 +16,19 @@ globalThis.FileReader ??= class {
   }
 };
 
-const knight = buildKnight(THREE);
+// Normais chapadas no arquivo: cada triângulo com a própria normal (visual facetado).
+function flatten(root) {
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry;
+    g.deleteAttribute('uv');
+    g.computeVertexNormals();
+    o.geometry = g;
+  });
+  return root;
+}
+
+const knight = flatten(buildKnight(THREE));
 knight.updateMatrixWorld(true);
 
 const glb = await new GLTFExporter().parseAsync(knight, { binary: true });
@@ -24,7 +36,8 @@ fs.writeFileSync('cavaleiro.glb', Buffer.from(glb));
 
 // Versão com o contorno de desenho (casco invertido) embutido na malha.
 const outlined = buildKnight(THREE);
-addOutline(THREE, outlined, 0.016);
+addOutline(THREE, outlined, 0.012);
+flatten(outlined);
 outlined.updateMatrixWorld(true);
 const glbOutline = await new GLTFExporter().parseAsync(outlined, { binary: true });
 fs.writeFileSync('cavaleiro_contorno.glb', Buffer.from(glbOutline));
