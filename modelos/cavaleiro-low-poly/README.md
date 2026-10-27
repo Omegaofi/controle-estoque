@@ -33,6 +33,10 @@ lado esquerdo e topete na frente.
 - **Escudo e espada:** escudo curvo com aro de aço, rebites e correias no verso;
   espada com sulco na lâmina, anéis no cabo e bainha presa ao cinto. A guarda
   da espada fica na vertical, alinhada com a mão, parada e durante o golpe.
+  Pegada: o cabo passa por dentro dos dedos fechados, a guarda encosta logo
+  depois do indicador (lado do polegar), o gume fica alinhado com os nós dos
+  dedos e o resto do cabo e o pomo saem pelo lado do mindinho; parado e
+  andando, a lâmina aponta à frente e um pouco para baixo.
 
 **Animação de caminhada** (`animacoes.js`, ciclo de 1,2 s em loop), baseada
 no relatório de referência sobre o caminhar do cavaleiro de espada e escudo:

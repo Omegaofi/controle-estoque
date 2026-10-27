@@ -760,7 +760,7 @@ export function buildKnight(THREE, options = {}) {
         [-0.028 + i * 0.019, -0.094 + Math.abs(i - 1.5) * 0.003, 0.015], [0.35, 0, 0], [1, 1, 1], detail);
     }
     mesh(`Polegar${L}`, new THREE.BoxGeometry(0.018, 0.048, 0.019), 'couro', fist, [-0.042 * side, -0.06, -0.016], [0.2, 0, 0.5 * side]);
-    return { shoulder, elbow, hand, plates };
+    return { shoulder, elbow, hand, fist, plates };
   }
 
   // Lado da espada: -1 = mão direita. O escudo fica no outro braço.
@@ -851,16 +851,32 @@ export function buildKnight(THREE, options = {}) {
   }
   mesh('Pomo', new THREE.CylinderGeometry(0.028, 0.028, 0.02, 8), 'latao', sword, [0, 0.12, 0], [0, 0, Math.PI / 2]);
 
+  // Pegada da espada, no espaço do punho fechado (x atravessa os nós dos dedos,
+  // y desce da palma para os dedos, +z é o dorso e -z a palma):
+  // - o cabo passa por dentro dos dedos fechados, ao longo de x;
+  // - a guarda encosta logo depois do indicador (do lado do polegar) e a lâmina
+  //   sai por ali; o resto do cabo e o pomo saem pelo lado do mindinho;
+  // - a guarda e o gume ficam alinhados com os nós dos dedos (eixo y).
+  const thumbSide = -SWORD; // o polegar fica em x = -0.042 * lado
+  const fistQ = swordArm.fist.quaternion;
+  const gripInFist = new THREE.Vector3(thumbSide * (0.04 - 0.095), -0.08, -0.016);
+  const gripAxes = new THREE.Matrix4().makeBasis(
+    new THREE.Vector3(0, 1, 0),           // largura da lâmina e guarda (x da espada)
+    new THREE.Vector3(-thumbSide, 0, 0),  // do cabo para o pomo (y da espada)
+    new THREE.Vector3(0, 0, thumbSide));  // face da lâmina (z da espada)
+  sword.position.copy(gripInFist).applyQuaternion(fistQ).add(swordArm.fist.position);
+  sword.quaternion.copy(fistQ).multiply(new THREE.Quaternion().setFromRotationMatrix(gripAxes));
+  swordArm.hand.add(sword);
+  // Pose parada: o pulso gira para a lâmina apontar à frente e para baixo, com a
+  // guarda na vertical (no plano vertical que contém a lâmina).
   knight.updateMatrixWorld(true);
-  const gripPos = swordArm.hand.localToWorld(new THREE.Vector3(0, -0.06, 0.005));
-  const bladeDir = new THREE.Vector3(0.05 * SWORD, -0.78, 0.48).normalize();
-  // Guarda na vertical: o eixo x local da espada (largura da lâmina e da guarda)
-  // fica no plano vertical que contém a lâmina.
+  const bladeDir = new THREE.Vector3(0.05 * SWORD, -0.42, 0.9).normalize();
   const swordY = bladeDir.clone().negate();
   const swordX = new THREE.Vector3(0, 1, 0).addScaledVector(swordY, -swordY.y).normalize();
   const swordZ = new THREE.Vector3().crossVectors(swordX, swordY);
-  const swordQuat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(swordX, swordY, swordZ));
-  attachWorld(sword, swordArm.hand, gripPos, swordQuat);
+  const swordWorld = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(swordX, swordY, swordZ));
+  const elbowWorld = swordArm.elbow.getWorldQuaternion(new THREE.Quaternion());
+  swordArm.hand.quaternion.copy(elbowWorld.invert().multiply(swordWorld).multiply(sword.quaternion.clone().invert()));
 
   // ---------- Bainha no quadril esquerdo, presa ao cinto ----------
   const scabbard = group('Bainha', knight, [0.18, 0.93, 0.05]);

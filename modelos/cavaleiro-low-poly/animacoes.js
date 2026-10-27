@@ -175,7 +175,7 @@ export const CAMINHADA = {
     tronco: walkKeys(u => [0.11 * Math.cos(TAU * (u - 0.03)), 0.05 + 0.01 * Math.cos(2 * TAU * (u - 0.1)), 0.015 * Math.sin(TAU * u)]),
     cabeca: walkKeys(() => [0.02, 0]),
     maoEspada: walkKeys(u => [0.235, -0.06 + 0.008 * Math.cos(2 * TAU * (u - 0.1)), 0.12 - 0.035 * Math.cos(TAU * (u - 0.07))]),
-    lamina: walkKeys(u => [0.05, -0.8, 0.55 - 0.08 * Math.cos(TAU * (u - 0.1))]),
+    lamina: walkKeys(u => [0.05, -0.42 - 0.04 * Math.cos(TAU * (u - 0.1)), 0.9]),
     maoEscudo: walkKeys(u => [-0.2, 0.06 + 0.006 * Math.cos(2 * TAU * (u - 0.12)), 0.27 + 0.012 * Math.cos(TAU * (u - 0.1))]),
     peEspada: walkKeys(footAt(0, 0.13, 0.08), 48),
     peEscudo: walkKeys(footAt(0.5, -0.13, -0.08), 48),
