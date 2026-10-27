@@ -1,0 +1,237 @@
+<title>Cavaleiro Low Poly</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Karla:wght@400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+  /* Layout: palco 3D grande à esquerda, ficha técnica estreita à direita; empilha no celular. */
+  :root {
+    --bg: #eef0ea;
+    --panel: #f8f9f5;
+    --stage-top: #dfe6dc;
+    --stage-bottom: #c4cfc1;
+    --fg: #1f261f;
+    --muted: #5d6a5d;
+    --line: #cfd7cc;
+    --accent: #2f8a3f;
+    --font-display: "Cinzel", "Trajan Pro", Georgia, serif;
+    --font-body: "Karla", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141814; --panel: #1b201b; --stage-top: #273027; --stage-bottom: #121612;
+      --fg: #e6ebe4; --muted: #9aa79a; --line: #2e372e; --accent: #5fbf6e; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141814; --panel: #1b201b; --stage-top: #273027; --stage-bottom: #121612;
+    --fg: #e6ebe4; --muted: #9aa79a; --line: #2e372e; --accent: #5fbf6e; color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 16px; box-sizing: border-box;
+  }
+  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; height: 100%; max-width: 1280px; margin: 0 auto; }
+  .stage {
+    position: relative; min-height: 420px; border-radius: 10px; overflow: hidden;
+    background: linear-gradient(var(--stage-top), var(--stage-bottom));
+  }
+  .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  .stage canvas:active { cursor: grabbing; }
+  .hint {
+    position: absolute; left: 14px; bottom: 12px; margin: 0; font-size: 12px; color: var(--muted);
+    font-family: var(--font-mono); pointer-events: none;
+  }
+  aside {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px;
+    display: flex; flex-direction: column; gap: 18px; min-width: 0; overflow-y: auto;
+  }
+  h1 { font-family: var(--font-display); font-weight: 700; font-size: 24px; line-height: 1.15; margin: 0; letter-spacing: 0.02em; text-wrap: balance; }
+  .lede { margin: 6px 0 0; color: var(--muted); }
+  h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 14px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; text-align: right; font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .swatches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+  .swatches li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .chip { width: 18px; height: 18px; border-radius: 4px; flex: none; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15); }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--bg); color: var(--fg);
+  }
+  button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .files { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  .files code { font-family: var(--font-mono); color: var(--fg); font-size: 12px; }
+  @media (max-width: 760px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); height: auto; }
+    .stage { height: 62vh; min-height: 360px; }
+    aside { overflow: visible; }
+  }
+</style>
+
+<div class="wrap">
+  <div class="stage" id="stage">
+    <p class="hint">arraste para girar · role para aproximar</p>
+  </div>
+  <aside>
+    <div>
+      <h1>Cavaleiro Low Poly</h1>
+      <p class="lede">Sem elmo, capa verde, escudo no braço direito e espada na mão esquerda. Cores chapadas, sem textura de imagem.</p>
+    </div>
+    <div class="controls">
+      <button id="spin" type="button" aria-pressed="true">Girar sozinho</button>
+      <button id="wire" type="button" aria-pressed="false">Malha</button>
+      <button id="back" type="button">Ver de costas</button>
+    </div>
+    <section>
+      <h2>Ficha técnica</h2>
+      <dl>
+        <dt>Triângulos</dt><dd id="tris">–</dd>
+        <dt>Vértices</dt><dd id="verts">–</dd>
+        <dt>Peças</dt><dd id="parts">–</dd>
+        <dt>Materiais</dt><dd id="mats">–</dd>
+        <dt>Altura</dt><dd id="height">–</dd>
+      </dl>
+    </section>
+    <section>
+      <h2>Paleta (a "textura")</h2>
+      <ul class="swatches" id="swatches"></ul>
+    </section>
+    <section>
+      <h2>Arquivos</h2>
+      <ul class="files">
+        <li><code>cavaleiro.glb</code> · Blender, Unity, Godot</li>
+        <li><code>cavaleiro.obj</code> + <code>.mtl</code></li>
+        <li><code>knight.js</code> · gerador Three.js</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  import { buildKnight, PALETTE } from './knight.js';
+
+  const LABELS = {
+    pele: 'Pele', cabelo: 'Cabelo e barba', aco: 'Aço claro', acoEscuro: 'Aço escuro',
+    capa: 'Capa verde', capaInterna: 'Gola da capa', couro: 'Couro', bota: 'Botas',
+    ouro: 'Detalhes dourados', escudoFace: 'Face do escudo', lamina: 'Lâmina', olho: 'Olhos',
+  };
+
+  const stage = document.getElementById('stage');
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  stage.prepend(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50);
+  camera.position.set(2.1, 1.5, 3.4);
+
+  scene.add(new THREE.HemisphereLight(0xf4f7ff, 0x50604a, 1.4));
+  const sun = new THREE.DirectionalLight(0xfff3df, 2.4);
+  sun.position.set(2.5, 4, 3);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  Object.assign(sun.shadow.camera, { left: -1.5, right: 1.5, top: 2.2, bottom: -0.5 });
+  scene.add(sun);
+
+  const ground = new THREE.Mesh(
+    new THREE.CircleGeometry(1.4, 10),
+    new THREE.MeshStandardMaterial({ color: 0x7d8f6f, flatShading: true, roughness: 1 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  const knight = buildKnight(THREE);
+  scene.add(knight);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 0.95, 0);
+  controls.enableDamping = true;
+  controls.minDistance = 1.5;
+  controls.maxDistance = 7;
+  controls.autoRotate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  controls.autoRotateSpeed = 1.2;
+  controls.update();
+
+  // Ficha técnica
+  let tris = 0, verts = 0, parts = 0;
+  const materials = new Set();
+  knight.traverse(o => {
+    if (!o.isMesh) return;
+    parts++;
+    materials.add(o.material);
+    const g = o.geometry;
+    verts += g.attributes.position.count;
+    tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+  });
+  const box = new THREE.Box3().setFromObject(knight);
+  const fmt = n => n.toLocaleString('pt-BR');
+  document.getElementById('tris').textContent = fmt(tris);
+  document.getElementById('verts').textContent = fmt(verts);
+  document.getElementById('parts').textContent = fmt(parts);
+  document.getElementById('mats').textContent = fmt(materials.size);
+  document.getElementById('height').textContent = (box.max.y - box.min.y).toFixed(2) + ' m';
+
+  const list = document.getElementById('swatches');
+  for (const [key, hex] of Object.entries(PALETTE)) {
+    const li = document.createElement('li');
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.style.background = '#' + hex.toString(16).padStart(6, '0');
+    li.append(chip, LABELS[key] || key);
+    list.append(li);
+  }
+
+  // Controles
+  const spinBtn = document.getElementById('spin');
+  spinBtn.setAttribute('aria-pressed', String(controls.autoRotate));
+  spinBtn.addEventListener('click', () => {
+    controls.autoRotate = !controls.autoRotate;
+    spinBtn.setAttribute('aria-pressed', String(controls.autoRotate));
+  });
+  const wireBtn = document.getElementById('wire');
+  wireBtn.addEventListener('click', () => {
+    const on = wireBtn.getAttribute('aria-pressed') !== 'true';
+    materials.forEach(m => { m.wireframe = on; });
+    wireBtn.setAttribute('aria-pressed', String(on));
+  });
+  const backBtn = document.getElementById('back');
+  backBtn.addEventListener('click', () => {
+    const behind = camera.position.z > 0;
+    const d = Math.hypot(camera.position.x, camera.position.z);
+    camera.position.set(behind ? -0.6 : 0.6, 1.5, behind ? -d : d);
+    backBtn.textContent = behind ? 'Ver de frente' : 'Ver de costas';
+    controls.update();
+  });
+
+  function resize() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage);
+  resize();
+
+  renderer.setAnimationLoop(() => {
+    controls.update();
+    renderer.render(scene, camera);
+  });
+  window.__knightReady = true;
+</script>
