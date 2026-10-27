@@ -7,7 +7,7 @@ d 1
 illum 2
 
 newmtl cabelo
-Kd 0.2902 0.2196 0.1569
+Kd 0.2275 0.1686 0.1255
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
@@ -95,7 +95,23 @@ d 1
 illum 2
 
 newmtl olho
-Kd 0.1020 0.0941 0.0902
+Kd 0.1647 0.1255 0.0980
+Ka 0 0 0
+Ks 0.1 0.1 0.1
+Ns 10
+d 1
+illum 2
+
+newmtl olhoBranco
+Kd 0.8392 0.8157 0.7765
+Ka 0 0 0
+Ks 0.1 0.1 0.1
+Ns 10
+d 1
+illum 2
+
+newmtl rosto
+Kd 1.0000 1.0000 1.0000
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10

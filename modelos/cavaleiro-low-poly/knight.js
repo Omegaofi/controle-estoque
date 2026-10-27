@@ -7,7 +7,7 @@
 
 export const PALETTE = {
   pele: 0xae8a77,
-  cabelo: 0x4a3828,
+  cabelo: 0x3a2b20,
   aco: 0x80868d,
   acoEscuro: 0x50555b,
   malha: 0x42464b,
@@ -18,7 +18,9 @@ export const PALETTE = {
   madeira: 0x5a4838,
   escudoFace: 0xa7a18e,
   lamina: 0xa2a8ad,
-  olho: 0x1a1817,
+  olho: 0x2a2019,
+  olhoBranco: 0xd6d0c6,
+  rosto: 0xffffff,
   bordado: 0x7b6d4d,
 };
 
@@ -91,8 +93,21 @@ function loft(THREE, profile, seg = 10, opts = { capStart: true, capEnd: true })
 }
 
 // Formato do crânio: mandíbula mais estreita, nuca cheia, rosto achatado.
+const gauss = (v, c, w) => Math.exp(-(((v - c) / w) ** 2));
 function headPoint(nx, ny, nz, k = 1) {
   let x = nx, y = ny, z = nz;
+  // Relevo do rosto (só na frente): arco das sobrancelhas, órbitas dos olhos,
+  // maçãs do rosto, lábios e queixo.
+  const front = Math.min(1, Math.max(0, (nz - 0.55) / 0.3));
+  const ax = Math.abs(nx);
+  z += front * (
+    0.05 * gauss(ny, 0.3, 0.09) * gauss(ax, 0.3, 0.22)
+    - 0.06 * gauss(ny, 0.13, 0.08) * gauss(ax, 0.32, 0.12)
+    + 0.025 * gauss(ny, -0.55, 0.06) * gauss(nx, 0, 0.22)
+    + 0.06 * gauss(ny, -0.82, 0.1) * gauss(nx, 0, 0.25));
+  const cheek = 1 + 0.045 * gauss(ny, -0.05, 0.15) * gauss(ax, 0.62, 0.16);
+  x *= cheek;
+  z *= 1 + 0.02 * gauss(ny, -0.05, 0.15) * gauss(ax, 0.62, 0.16);
   if (y < 0) {
     const t = -y;
     x *= 1 - 0.34 * t * t;
@@ -106,10 +121,11 @@ function headPoint(nx, ny, nz, k = 1) {
 // Recorta uma "casca" da esfera da cabeça (cabelo, barba) pelos triângulos
 // cujo centro passa no teste, e aplica o mesmo formato de crânio. k (escala da
 // casca) pode ser um número ou uma função da direção na esfera.
-function headShell(THREE, k, keep, wSeg = 16, hSeg = 12) {
+function headShell(THREE, k, keep, wSeg = 16, hSeg = 12, { faceUV = false } = {}) {
   const src = new THREE.SphereGeometry(1, wSeg, hSeg).toNonIndexed();
   const p = src.attributes.position;
   const out = [];
+  const uv = [];
   for (let i = 0; i < p.count; i += 3) {
     const cx = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3;
     const cy = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3;
@@ -117,13 +133,33 @@ function headShell(THREE, k, keep, wSeg = 16, hSeg = 12) {
     if (!keep(cx, cy, cz)) continue;
     for (let j = 0; j < 3; j++) {
       const x = p.getX(i + j), y = p.getY(i + j), z = p.getZ(i + j);
-      out.push(...headPoint(x, y, z, typeof k === 'function' ? k(x, y, z) : k));
+      const q = headPoint(x, y, z, typeof k === 'function' ? k(x, y, z) : k);
+      out.push(...q);
+      // Rosto: projeção de frente sobre a textura do rosto; o resto da cabeça
+      // (triângulos virados para os lados e para trás) usa um canto só de pele.
+      if (faceUV) uv.push(...(cz < 0.3 ? [0.03, 0.97] : [0.5 + q[0] / 0.16, 0.5 + q[1] / 0.25]));
     }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
+  if (faceUV) {
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    g.userData.customUV = true;
+  }
   g.computeVertexNormals();
   return g;
+}
+
+// Malha livre com as faces viradas para fora de um ponto interno.
+function polyGeoOut(THREE, verts, faces, inside) {
+  const c = new THREE.Vector3(...inside), a = new THREE.Vector3(), b = new THREE.Vector3(), d = new THREE.Vector3();
+  const fixed = faces.map(([i, j, k]) => {
+    a.set(...verts[i]); b.set(...verts[j]); d.set(...verts[k]);
+    const n = new THREE.Vector3().subVectors(d, b).cross(new THREE.Vector3().subVectors(a, b));
+    const m = a.clone().add(b).add(d).divideScalar(3).sub(c);
+    return n.dot(m) < 0 ? [i, k, j] : [i, j, k];
+  });
+  return polyGeo(THREE, verts, fixed);
 }
 
 // Malha livre a partir de vértices e triângulos.
@@ -240,6 +276,60 @@ export function makeTexture(THREE, pattern, seed = 1) {
   return tex;
 }
 
+// Textura do rosto (128×128, colorida): pele com variação leve, sombra das
+// órbitas, sobrancelhas, sombra sob o nariz, lábios, corado nas maçãs e sombra
+// suave da barba feita. As coordenadas seguem a projeção de frente usada nas
+// UVs do crânio: u = 0,5 + x/0,16 e v = 0,5 + y/0,25 (em metros, no espaço da cabeça).
+export function makeFaceTexture(THREE, skin, brow) {
+  const S = 128;
+  const rgb = h => [(h >> 16) & 255, (h >> 8) & 255, h & 255];
+  const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+  const base = rgb(skin), dark = rgb(brow);
+  const lipUp = [150, 96, 82], lipLow = [166, 110, 94], blush = [190, 120, 108], stubble = [128, 104, 92];
+  const noise = valueNoise(77, 16);
+  const data = new Uint8Array(S * S * 4);
+  for (let py = 0; py < S; py++) {
+    for (let px = 0; px < S; px++) {
+      const x = ((px + 0.5) / S - 0.5) * 0.16, y = ((py + 0.5) / S - 0.5) * 0.25;
+      const ax = Math.abs(x);
+      let c = base.map(v => v * (0.96 + 0.05 * noise((px / S) * 64, (py / S) * 64)));
+      // Órbitas: sombra suave em volta dos olhos.
+      const socket = ((ax - 0.03) / 0.021) ** 2 + ((y - 0.017) / 0.013) ** 2;
+      if (socket < 1) c = c.map(v => v * (1 - 0.13 * (1 - socket)));
+      // Sobrancelhas: traço que afina para fora.
+      if (ax > 0.011 && ax < 0.052) {
+        const t = (ax - 0.011) / 0.041;
+        const cy = 0.035 + 0.006 * Math.sin(t * Math.PI) - 0.004 * t;
+        const th = 0.0048 * (1 - 0.55 * t);
+        if (Math.abs(y - cy) < th) c = mix(c, dark, 0.85);
+      }
+      // Sombra sob o nariz e entre o nariz e a boca.
+      if (ax < 0.016 && Math.abs(y + 0.036) < 0.004) c = c.map(v => v * 0.86);
+      if (ax < 0.006 && y < -0.04 && y > -0.054) c = c.map(v => v * 0.95);
+      // Lábios.
+      const upW = 0.019 * Math.sqrt(Math.max(0, 1 - ((y + 0.059) / 0.0045) ** 2));
+      const lowW = 0.016 * Math.sqrt(Math.max(0, 1 - ((y + 0.066) / 0.0045) ** 2));
+      if (y > -0.0615 && ax < upW) c = mix(c, lipUp, 0.75);
+      else if (y <= -0.0615 && ax < lowW) c = mix(c, lipLow, 0.7);
+      if (Math.abs(y + 0.0615) < 0.0011 && ax < 0.017) c = c.map(v => v * 0.6);
+      // Corado nas maçãs do rosto.
+      const ch = Math.hypot(ax - 0.047, y + 0.02) / 0.022;
+      if (ch < 1) c = mix(c, blush, 0.14 * (1 - ch));
+      // Barba bem feita: sombra leve no queixo e mandíbula, fora dos lábios.
+      if (y < -0.05 && !(ax < 0.021 && y > -0.072)) c = mix(c, stubble, 0.1 * Math.min(1, (-0.05 - y) / 0.02));
+      data.set([...c.map(v => Math.round(Math.min(255, Math.max(0, v)))), 255], (py * S + px) * 4);
+    }
+  }
+  const tex = new THREE.DataTexture(data, S, S, THREE.RGBAFormat);
+  tex.name = 'rosto';
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.generateMipmaps = true;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 // Mapeamento em caixa: cada triângulo projeta no plano do eixo mais próximo da
 // sua normal, em metros (já com a escala da peça), uma repetição a cada 0,2 m.
 const UV_TILE = 0.2;
@@ -276,6 +366,7 @@ export function buildKnight(THREE, options = {}) {
   const textures = {};
   let seed = 1;
   for (const [name, pattern] of Object.entries(MATERIAL_PATTERN)) textures[name] = makeTexture(THREE, pattern, seed++);
+  textures.rosto = makeFaceTexture(THREE, PALETTE.pele, PALETTE.cabelo);
   for (const [name, color] of Object.entries(PALETTE)) {
     mats[name] = ramp
       ? Object.assign(new THREE.MeshToonMaterial({ name, color, gradientMap: ramp, map: textures[name] ?? null }), { flatShading: true })
@@ -298,7 +389,7 @@ export function buildKnight(THREE, options = {}) {
   // Geometrias compartilhadas (rebites, capa e forro) ganham UV uma vez só.
   const uvCache = new Map();
   function mesh(name, geometry, mat, parent, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 1, 1], opts = {}) {
-    if (!uvCache.has(geometry)) uvCache.set(geometry, boxUV(THREE, geometry, scale));
+    if (!uvCache.has(geometry)) uvCache.set(geometry, geometry.userData.customUV ? geometry : boxUV(THREE, geometry, scale));
     const m = new THREE.Mesh(uvCache.get(geometry), mats[mat]);
     m.name = name;
     m.position.set(...pos);
@@ -526,7 +617,7 @@ export function buildKnight(THREE, options = {}) {
   // Cabeça um pouco maior (10%), subindo para o queixo não entrar no gorjal.
   const head = group('Cabeca', knight, [0, 1.694, 0.004]);
   head.scale.setScalar(1.1);
-  mesh('Cranio', headShell(THREE, 1, () => true, 18, 14), 'pele', head);
+  mesh('Cranio', headShell(THREE, 1, () => true, 24, 18, { faceUV: true }), 'rosto', head);
   // Cabelo "old money": testa livre com a linha do cabelo alta e entradas
   // leves nas têmporas; laterais e nuca curtas e afinadas; em cima o volume
   // nasce da linha do cabelo e sobe penteado para trás, com risca do lado
@@ -549,13 +640,23 @@ export function buildKnight(THREE, options = {}) {
     const part = Math.exp(-(((x - 0.4) / 0.07) ** 2)) * smooth(0.3, 0.55, y) * smooth(-0.5, 0.2, z);
     const quiff = smooth(0.5, 0.85, y) * smooth(0.3, 0.8, z) * grow;
     const side = 1 + 0.3 * smooth(0.4, -0.6, x);              // mais cheio do lado oposto à risca
-    return 1.022 + grow * (0.15 * top * front * crown * side + 0.07 * quiff) - 0.06 * part;
+    return 1.03 + grow * (0.21 * top * front * crown * side + 0.09 * quiff) - 0.06 * part;
   };
   mesh('Cabelo', headShell(THREE, hairK, (x, y, z) =>
     y > hairline(x, z) && !(Math.abs(x) > 0.78 && y < 0.22 && z > -0.3), 34, 26), 'cabelo', head);
+  // Nariz: dorso, ponta arredondada e asas.
+  mesh('Nariz', polyGeoOut(THREE, [
+    [0, 0.03, 0.083], [0, 0.0, 0.093], [0, -0.023, 0.104], [-0.0165, -0.031, 0.085], [0.0165, -0.031, 0.085],
+    [0, -0.034, 0.092], [-0.0105, 0.004, 0.085], [0.0105, 0.004, 0.085], [-0.008, -0.026, 0.097], [0.008, -0.026, 0.097],
+  ], [
+    [0, 6, 1], [0, 1, 7], [6, 8, 1], [1, 8, 2], [1, 2, 9], [1, 9, 7], [6, 3, 8], [7, 9, 4],
+    [8, 3, 5], [8, 5, 2], [2, 5, 9], [9, 5, 4],
+  ], [0, -0.01, 0.07]), 'pele', head, [0, 0, 0], [0, 0, 0], [1, 1, 1], { noOutline: true });
   for (const side of [1, -1]) {
     const S = side === 1 ? 'Esquerdo' : 'Direito';
-    mesh(`Olho${S}`, new THREE.SphereGeometry(1, 6, 4), 'olho', head, [0.03 * side, 0.016, 0.081], [0, 0.3 * side, 0], [0.011, 0.0075, 0.005], { noOutline: true });
+    // Olho: branco amendoado com a íris escura por cima.
+    mesh(`Olho${S}`, new THREE.SphereGeometry(1, 8, 5), 'olhoBranco', head, [0.03 * side, 0.016, 0.0795], [0, 0.3 * side, 0], [0.0115, 0.0058, 0.0042], { noOutline: true });
+    mesh(`Iris${S}`, new THREE.SphereGeometry(1, 6, 4), 'olho', head, [0.028 * side, 0.016, 0.0832], [0, 0.3 * side, 0], [0.0052, 0.0052, 0.0016], { noOutline: true });
     mesh(`Orelha${S}`, new THREE.IcosahedronGeometry(1, 0), 'pele', head, [0.077 * side, 0.002, -0.01], [0.15, 0, 0], [0.012, 0.03, 0.02], { noOutline: true });
   }
 
@@ -570,19 +671,45 @@ export function buildKnight(THREE, options = {}) {
       { y: -0.02, w: 0.052, f: 0.052 },
       { y: -0.28, w: 0.044, f: 0.044 },
     ], 10), 'malha', shoulder);
-    // Espaldar: cúpula, três lâminas (a última com borda de latão) e rebites.
-    mesh(`Espaldar${L}`, new THREE.SphereGeometry(1, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), 'aco', shoulder,
-      [0.012 * side, 0.02, 0], [0, 0, -0.32 * side], [0.105, 0.075, 0.1]);
-    [[-0.02, -0.055, 0.088, 'acoEscuro'], [-0.05, -0.085, 0.08, 'aco'], [-0.08, -0.105, 0.072, 'acoEscuro']].forEach(([y0, y1, w, mat], i) => {
-      mesh(`LaminaOmbro${L}${i + 1}`, loft(THREE, [
-        { y: y0, w, f: w * 0.98 },
-        { y: y1, w: w * 1.04, f: w * 1.02 },
-      ], 12, { capStart: false, capEnd: false }), mat, shoulder, [0.01 * side, 0, 0], [0, 0, -0.25 * side]);
-    });
+    // Espaldar: cúpula com crista e borda enrolada, friso de latão, placa alta
+    // junto ao pescoço, quatro lâminas rebitadas e borda de latão na última.
+    const pauldron = group(`Espaldar${L}`, shoulder, [0.012 * side, 0.02, 0], [0, 0, -0.32 * side]);
+    mesh(`EspaldarCupula${L}`, new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), 'aco', pauldron,
+      [0, 0, 0], [0, 0, 0], [0.105, 0.075, 0.1]);
+    // Crista: aresta saliente de frente para trás, seguindo a curva da cúpula.
+    mesh(`EspaldarCrista${L}`, new THREE.TorusGeometry(1, 0.06, 4, 12, Math.PI), 'acoEscuro', pauldron,
+      [0, 0, 0], [0, Math.PI / 2, 0], [0.1, 0.077, 0.12]);
+    // Borda enrolada na base da cúpula.
+    mesh(`EspaldarBorda${L}`, new THREE.TorusGeometry(1, 0.06, 4, 18), 'acoEscuro', pauldron,
+      [0, 0.002, 0], [Math.PI / 2, 0, 0], [0.106, 0.101, 0.09]);
+    // Friso decorativo de latão a meia altura da cúpula.
+    mesh(`EspaldarFriso${L}`, new THREE.TorusGeometry(1, 0.035, 3, 18), 'latao', pauldron,
+      [0, 0.04, 0], [Math.PI / 2, 0, 0], [0.088, 0.084, 0.12], { castShadow: false, noOutline: true });
+    // Rebites ao longo da borda da cúpula.
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2 + 0.2;
+      rivet(pauldron, Math.sin(a) * 0.098, 0.012, Math.cos(a) * 0.093);
+    }
+    // Placa alta (haute-piece) junto ao pescoço, com borda de latão.
+    mesh(`EspaldarPlacaAlta${L}`, new THREE.BoxGeometry(0.01, 0.045, 0.13), 'aco', pauldron,
+      [-0.07 * side, 0.072, 0], [0, 0, 0.18 * side]);
+    mesh(`EspaldarPlacaAltaBorda${L}`, new THREE.BoxGeometry(0.013, 0.007, 0.132), 'latao', pauldron,
+      [-0.074 * side, 0.095, 0], [0, 0, 0.18 * side], [1, 1, 1], detail);
+    // Lâminas abaixo da cúpula, cada uma com rebites na frente e atrás.
+    const lames = group(`LaminasOmbro${L}`, shoulder, [0.01 * side, 0, 0], [0, 0, -0.25 * side]);
+    [[-0.015, -0.045, 0.09, 'acoEscuro'], [-0.04, -0.068, 0.084, 'aco'], [-0.062, -0.088, 0.078, 'acoEscuro'], [-0.082, -0.106, 0.072, 'aco']]
+      .forEach(([y0, y1, w, mat], i) => {
+        mesh(`LaminaOmbro${L}${i + 1}`, loft(THREE, [
+          { y: y0, w, f: w * 0.98 },
+          { y: y1, w: w * 1.04, f: w * 1.02 },
+        ], 14, { capStart: false, capEnd: false }), mat, lames);
+        const ym = (y0 + y1) / 2, wm = w * 1.02 + 0.002;
+        for (const t of [0.6, -0.6, Math.PI - 0.6, Math.PI + 0.6]) rivet(lames, Math.sin(t) * wm, ym, Math.cos(t) * wm);
+      });
     mesh(`BordaOmbro${L}`, loft(THREE, [
-      { y: -0.108, w: 0.076, f: 0.075 },
-      { y: -0.1, w: 0.076, f: 0.075 },
-    ], 12, { capStart: false, capEnd: false }), 'latao', shoulder, [0.01 * side, 0, 0], [0, 0, -0.25 * side], [1, 1, 1], detail);
+      { y: -0.109, w: 0.076, f: 0.075 },
+      { y: -0.101, w: 0.076, f: 0.075 },
+    ], 14, { capStart: false, capEnd: false }), 'latao', lames, [0, 0, 0], [0, 0, 0], [1, 1, 1], detail);
     // Correia que liga o espaldar à couraça.
     mesh(`CorreiaOmbro${L}`, new THREE.BoxGeometry(0.085, 0.005, 0.022), 'couro', shoulder, [-0.05 * side, 0.072, 0], [0, 0, 0.32 * side], [1, 1, 1], detail);
     mesh(`FivelaOmbro${L}`, new THREE.BoxGeometry(0.016, 0.008, 0.028), 'latao', shoulder, [-0.07 * side, 0.068, 0], [0, 0, 0.32 * side], [1, 1, 1], detail);
