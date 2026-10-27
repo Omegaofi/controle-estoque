@@ -1,12 +1,12 @@
-// Gera cavaleiro.glb, cavaleiro_contorno.glb (ambos com as animações "Ataque"
-// e "Defesa") e cavaleiro.obj/.mtl (pose parada) a partir de knight.js e animacoes.js.
+// Gera cavaleiro.glb, cavaleiro_contorno.glb (ambos com as animações "Caminhada",
+// "Ataque" e "Defesa") e cavaleiro.obj/.mtl (pose parada) a partir de knight.js e animacoes.js.
 // Uso: npm install three@0.160.0 && node exportar.mjs
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { buildKnight, addOutline, PALETTE } from './knight.js';
-import { createAnimation, ATAQUE, DEFESA } from './animacoes.js';
+import { createAnimation, ATAQUE, DEFESA, CAMINHADA } from './animacoes.js';
 
 // O GLTFExporter usa FileReader, que não existe no Node.
 globalThis.FileReader ??= class {
@@ -87,7 +87,7 @@ function flatten(root) {
 // No arquivo a capa vai presa ao tronco (sem a deformação com atraso do visualizador).
 function withAnimations(root) {
   for (const o of [...root.children]) if (/^Capa/.test(o.name)) root.rig.tronco.attach(o);
-  return [ATAQUE, DEFESA].map(c => createAnimation(THREE, root, c, { deformCape: false }).bake(30));
+  return [CAMINHADA, ATAQUE, DEFESA].map(c => createAnimation(THREE, root, c, { deformCape: false }).bake(30));
 }
 
 const knight = buildKnight(THREE);

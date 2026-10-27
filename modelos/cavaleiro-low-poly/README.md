@@ -34,6 +34,16 @@ lado esquerdo e topete na frente.
   espada com sulco na lâmina, anéis no cabo e bainha presa ao cinto. A guarda
   da espada fica na vertical, alinhada com a mão, parada e durante o golpe.
 
+**Animação de caminhada** (`animacoes.js`, ciclo de 1,2 s em loop), baseada
+no relatório de referência sobre o caminhar do cavaleiro de espada e escudo:
+passo de cerca de 0,48 m, um pouco curto por causa do peso nas pernas, 60% do
+ciclo com o pé no chão; o quadril desce logo após o contato, sobe na passagem e
+vai para o lado do pé de apoio; quadril e tronco giram pouco e em sentidos
+opostos; escudo carregado à frente na altura da cintura e espada baixa com
+balanço curto e atrasado; a capa segue o tronco com atraso. O ciclo é feito no
+lugar (os pés deslizam para trás no apoio); no visualizador a raiz anda em
+círculo a 0,81 m/s, então os pés ficam parados no chão enquanto apoiam.
+
 **Animação de ataque** (`animacoes.js`, 2,4 s em loop): corte horizontal de
 direita com a espada, que varre da direita para a esquerda do cavaleiro (na
 tela, de quem olha de frente, vai da esquerda para a direita).
@@ -61,7 +71,8 @@ movimento real com escudo e de jogos:
   o tronco recua e a cabeça se encolhe; a recuperação é mais lenta;
 - guarda sustentada com respiração leve e, no fim, o pé de trás volta.
 
-Os dois `.glb` trazem as animações gravadas como clipes `Ataque` e `Defesa`
+Os dois `.glb` trazem as animações gravadas como clipes `Caminhada` (no
+lugar, para a engine aplicar o deslocamento), `Ataque` e `Defesa`
 (30 quadros por segundo, 15 articulações). Nos arquivos a capa vai presa ao tronco, sem o
 atraso do tecido que o visualizador simula.
 
@@ -79,11 +90,11 @@ pixel é ajustável (2 a 10 px).
 
 | Arquivo | Uso |
 | --- | --- |
-| `cavaleiro.glb` | Modelo com os clipes de animação `Ataque` e `Defesa`, para Blender, Unity, Godot, Unreal ou three.js |
+| `cavaleiro.glb` | Modelo com os clipes de animação `Caminhada`, `Ataque` e `Defesa`, para Blender, Unity, Godot, Unreal ou three.js |
 | `cavaleiro_contorno.glb` | Mesmo modelo com o contorno embutido (malhas `*_Contorno`, material sem iluminação) |
 | `cavaleiro.obj` + `cavaleiro.mtl` | Mesmo modelo em OBJ (pose parada, sem animação), um material por cor |
 | `knight.js` | Gerador do modelo em three.js: `buildKnight` (cores em `PALETTE`, `{ toon: true }` para cel shading) e `addOutline` |
-| `animacoes.js` | Clipes `ATAQUE` e `DEFESA` e o motor que os toca: chaves da pose, IK de pernas e braços, capa com atraso e `bake()` para glTF |
+| `animacoes.js` | Clipes `CAMINHADA`, `ATAQUE` e `DEFESA` e o motor que os toca: chaves da pose, IK de pernas e braços, capa com atraso e `bake()` para glTF |
 | `index.html` | Visualizador 3D (abrir por um servidor local, ex. `npx serve .`) |
 | `exportar.mjs` | Regera os GLB e o OBJ: `npm install three@0.160.0 && node exportar.mjs` |
 

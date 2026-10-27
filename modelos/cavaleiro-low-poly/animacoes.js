@@ -1,5 +1,6 @@
-// Animações do cavaleiro: ataque (corte horizontal) e defesa (bloqueio com
-// escudo, de lado, com as pernas firmando a base). Um único motor toca os clipes.
+// Animações do cavaleiro: caminhada, ataque (corte horizontal) e defesa
+// (bloqueio com escudo, de lado, com as pernas firmando a base). Um único motor
+// toca os clipes.
 //
 // Pernas e braços usam cinemática inversa de dois ossos: a animação define
 // onde ficam os pés e as mãos, e os ângulos de quadril/joelho e ombro/cotovelo
@@ -136,8 +137,55 @@ export const DEFESA = {
   },
 };
 
+// Caminhada: o cavaleiro de placas andando livre, a partir do relatório de
+// referência. Ciclo de 1,2 s (dois passos de 0,6 s) feito no lugar: os pés
+// deslizam para trás no apoio e a raiz do personagem anda para a frente a
+// rootSpeed m/s, então no chão cada pé fica parado enquanto apoia.
+// - 60% do ciclo com o pé no chão e 40% no ar; passo de cerca de 0,48 m, um
+//   pouco mais curto que o normal por causa do peso nas pernas.
+// - O quadril desce logo depois do contato (o peso "assenta"), sobe na
+//   passagem da outra perna e vai para o lado do pé de apoio.
+// - O quadril gira pouco com a perna da frente e o tronco gira ao contrário,
+//   porque os braços quase não balançam: escudo carregado à frente, na altura
+//   da cintura, e espada baixa, com um balanço curto e atrasado.
+// - Peito, braços e lâmina chegam um pouco depois do quadril (atraso de
+//   alguns quadros), e a capa segue o tronco com atraso.
+const WALK_T = 1.2, STANCE = 0.6, REACH = 0.29;
+const TAU = Math.PI * 2;
+const walkKeys = (f, steps = 24) => Array.from({ length: steps + 1 }, (_, i) => {
+  const t = (i / steps) * WALK_T;
+  return [t, ...f(t / WALK_T)];
+});
+// Pé: contato em u0, apoio linear para trás, depois balanço para a frente.
+const footAt = (u0, x, yaw) => u => {
+  const v = (((u - u0) % 1) + 1) % 1;
+  if (v < STANCE) return [x, REACH - (v / STANCE) * 2 * REACH, 0, yaw];
+  const s = (v - STANCE) / (1 - STANCE);
+  const ease = s * s * (3 - 2 * s);
+  return [x, -REACH + 2 * REACH * ease, 0.07 * Math.sin(Math.PI * s), yaw];
+};
+export const CAMINHADA = {
+  name: 'Caminhada',
+  duration: WALK_T,
+  loop: true,
+  rootSpeed: (2 * REACH) / (STANCE * WALK_T),
+  channels: {
+    baciaPos: walkKeys(u => [0.02 * Math.sin(TAU * u), -0.05 - 0.012 * Math.cos(2 * TAU * (u - 0.07)), 0]),
+    baciaYaw: walkKeys(u => [-0.08 * Math.cos(TAU * u)]),
+    tronco: walkKeys(u => [0.11 * Math.cos(TAU * (u - 0.03)), 0.05 + 0.01 * Math.cos(2 * TAU * (u - 0.1)), 0.015 * Math.sin(TAU * u)]),
+    cabeca: walkKeys(() => [0.02, 0]),
+    maoEspada: walkKeys(u => [0.235, -0.06 + 0.008 * Math.cos(2 * TAU * (u - 0.1)), 0.12 - 0.035 * Math.cos(TAU * (u - 0.07))]),
+    lamina: walkKeys(u => [0.05, -0.8, 0.55 - 0.08 * Math.cos(TAU * (u - 0.1))]),
+    maoEscudo: walkKeys(u => [-0.2, 0.06 + 0.006 * Math.cos(2 * TAU * (u - 0.12)), 0.27 + 0.012 * Math.cos(TAU * (u - 0.1))]),
+    peEspada: walkKeys(footAt(0, 0.13, 0.08), 48),
+    peEscudo: walkKeys(footAt(0.5, -0.13, -0.08), 48),
+  },
+};
+
 // Hermite cúbica com tangentes de Catmull-Rom para tempos não uniformes.
-function sample(keys, t) {
+// loop = duração do ciclo: as tangentes das pontas usam as chaves do outro
+// lado, e o ciclo emenda sem tranco (a primeira e a última chave são iguais).
+function sampleKeys(keys, t, loop = 0) {
   const n = keys.length;
   if (t <= keys[0][0]) return keys[0].slice(1);
   if (t >= keys[n - 1][0]) return keys[n - 1].slice(1);
@@ -146,6 +194,10 @@ function sample(keys, t) {
   const k0 = keys[i], k1 = keys[i + 1];
   const t0 = k0[0], t1 = k1[0], h = t1 - t0, s = (t - t0) / h;
   const tangent = j => {
+    if (loop && (j === 0 || j === n - 1)) {
+      const a = keys[n - 2], b = keys[1];
+      return c => (b[c] - a[c]) / (b[0] + loop - a[0]);
+    }
     const a = keys[Math.max(0, j - 1)], b = keys[Math.min(n - 1, j + 1)];
     return c => (j === 0 || j === n - 1 ? 0 : (b[c] - a[c]) / (b[0] - a[0]));
   };
@@ -164,6 +216,7 @@ function sample(keys, t) {
 export function createAnimation(THREE, knight, clip = ATAQUE, { deformCape = true } = {}) {
   const rig = knight.rig;
   const CHANNELS = clip.channels, DURATION = clip.duration;
+  const sample = (keys, t) => sampleKeys(keys, t, clip.loop ? DURATION : 0);
   const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
   const X = V(1, 0, 0);
 
@@ -345,8 +398,9 @@ export function createAnimation(THREE, knight, clip = ATAQUE, { deformCape = tru
     return new THREE.AnimationClip(clip.name, DURATION, out);
   }
 
-  return { name: clip.name, duration: DURATION, pose, reset, bake };
+  return { name: clip.name, duration: DURATION, rootSpeed: clip.rootSpeed ?? 0, pose, reset, bake };
 }
 
 export const createAttack = (THREE, knight, opts) => createAnimation(THREE, knight, ATAQUE, opts);
 export const createDefense = (THREE, knight, opts) => createAnimation(THREE, knight, DEFESA, opts);
+export const createWalk = (THREE, knight, opts) => createAnimation(THREE, knight, CAMINHADA, opts);
