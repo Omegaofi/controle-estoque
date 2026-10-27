@@ -206,15 +206,15 @@ export function createAttack(THREE, knight, { deformCape = true } = {}) {
     d.set(rx * M, ry, rz).sub(shieldArm.shoulder.position);
     twoBone(shieldArm.shoulder, shieldArm.elbow, rig.upperArm, rig.forearm, d, pole.set(-0.35 * M, -1, -0.3), -1);
 
-    // Orientação da espada: ponta na direção da lâmina, face plana para cima
-    // (gume na frente do movimento), convertida para a rotação do pulso.
+    // Orientação da espada: ponta na direção da lâmina e guarda (eixo x local)
+    // na vertical, alinhada com a mão; convertida para a rotação do pulso.
     const [ax, ay, az] = sample(CHANNELS.lamina, t);
     by.set(-ax * M, -ay, -az).normalize(); // o eixo +y local da espada aponta para o pomo
     tmp.set(0, 1, 0);
-    bz.copy(tmp).addScaledVector(by, -tmp.dot(by));
-    if (bz.lengthSq() < 1e-6) bz.set(0, 0, 1);
-    bz.normalize();
-    bx.crossVectors(by, bz);
+    bx.copy(tmp).addScaledVector(by, -tmp.dot(by));
+    if (bx.lengthSq() < 1e-6) bx.set(0, 0, 1);
+    bx.normalize();
+    bz.crossVectors(bx, by);
     qSword.setFromRotationMatrix(basis.makeBasis(bx, by, bz));
     knight.updateMatrixWorld(true);
     rig.tronco.getWorldQuaternion(qWorld);

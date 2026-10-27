@@ -699,7 +699,12 @@ export function buildKnight(THREE, options = {}) {
   knight.updateMatrixWorld(true);
   const gripPos = swordArm.hand.localToWorld(new THREE.Vector3(0, -0.06, 0.005));
   const bladeDir = new THREE.Vector3(0.05 * SWORD, -0.78, 0.48).normalize();
-  const swordQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), bladeDir);
+  // Guarda na vertical: o eixo x local da espada (largura da lâmina e da guarda)
+  // fica no plano vertical que contém a lâmina.
+  const swordY = bladeDir.clone().negate();
+  const swordX = new THREE.Vector3(0, 1, 0).addScaledVector(swordY, -swordY.y).normalize();
+  const swordZ = new THREE.Vector3().crossVectors(swordX, swordY);
+  const swordQuat = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(swordX, swordY, swordZ));
   attachWorld(sword, swordArm.hand, gripPos, swordQuat);
 
   // ---------- Bainha no quadril esquerdo, presa ao cinto ----------

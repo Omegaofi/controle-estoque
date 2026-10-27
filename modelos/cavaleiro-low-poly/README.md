@@ -14,7 +14,8 @@ espada longa na mão direita e escudo no braço esquerdo. Proporções humanas
 - **Capa:** lã verde com forro escuro, gola dobrada, barra e laterais bordadas,
   cruz bordada nas costas, broches e corrente no peito.
 - **Escudo e espada:** escudo curvo com aro de aço, rebites e correias no verso;
-  espada com sulco na lâmina, anéis no cabo e bainha presa ao cinto.
+  espada com sulco na lâmina, anéis no cabo e bainha presa ao cinto. A guarda
+  da espada fica na vertical, alinhada com a mão, parada e durante o golpe.
 
 **Animação de ataque** (`ataque.js`, 2,4 s em loop): corte horizontal de
 direita com a espada, que varre da direita para a esquerda do cavaleiro (na
