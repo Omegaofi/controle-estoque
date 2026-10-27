@@ -85,10 +85,12 @@
   <aside>
     <div>
       <h1>Cavaleiro Low Poly</h1>
-      <p class="lede">Proporções realistas, sem elmo e sem rosto (só os olhos), capa verde com bordado, escudo no braço direito e espada longa na mão esquerda. Pixel art com sombreamento de desenho em 3 tons e contorno escuro.</p>
+      <p class="lede">Proporções realistas, sem elmo e sem rosto (só os olhos), capa verde com bordado, escudo no braço direito e espada longa na mão esquerda. Corte horizontal com o corpo todo. Pixel art com sombreamento de desenho em 3 tons e contorno escuro.</p>
     </div>
     <div class="controls">
-      <button id="spin" type="button" aria-pressed="true">Girar sozinho</button>
+      <button id="attack" type="button" aria-pressed="true">Ataque</button>
+      <button id="slow" type="button" aria-pressed="false">Câmera lenta</button>
+      <button id="spin" type="button" aria-pressed="false">Girar sozinho</button>
       <button id="pixel" type="button" aria-pressed="true">Pixel art</button>
       <button id="outline" type="button" aria-pressed="true">Contorno</button>
       <button id="back" type="button">Ver de costas</button>
@@ -106,6 +108,7 @@
         <dt>Peças</dt><dd id="parts">–</dd>
         <dt>Materiais</dt><dd id="mats">–</dd>
         <dt>Altura</dt><dd id="height">–</dd>
+        <dt>Animação</dt><dd>Ataque · 2,4 s</dd>
       </dl>
     </section>
     <section>
@@ -134,6 +137,7 @@
   import * as THREE from 'three';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
   import { buildKnight, addOutline, toonRamp, PALETTE } from './knight.js';
+  import { createAttack } from './ataque.js';
 
   const LABELS = {
     pele: 'Pele', cabelo: 'Cabelo e barba', aco: 'Aço', acoEscuro: 'Aço escurecido',
@@ -152,7 +156,7 @@
   renderer.setClearColor(0x000000, 0);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50);
-  camera.position.set(2.1, 1.5, 3.4);
+  camera.position.set(1.6, 1.55, 3.9);
 
   // Luz ambiente + sol direcional: o sombreamento toon fica em faixas nítidas.
   scene.add(new THREE.AmbientLight(0xe9eef5, 1.1));
@@ -186,14 +190,18 @@
     tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
   });
   const outlineMat = addOutline(THREE, knight, 0.012);
+  const attack = createAttack(THREE, knight);
+  let playing = true, speed = 1, animTime = 0;
   scene.add(knight);
 
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.95, 0);
+  controls.target.set(0, 1.0, 0.1);
   controls.enableDamping = true;
   controls.minDistance = 1.5;
   controls.maxDistance = 7;
-  controls.autoRotate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  controls.autoRotate = false;
+  if (reduceMotion) playing = false;
   controls.autoRotateSpeed = 1.2;
   controls.update();
 
@@ -262,6 +270,11 @@
     });
   }
   toggle('spin', controls.autoRotate, on => { controls.autoRotate = on; });
+  toggle('attack', playing, on => {
+    playing = on;
+    if (!on) { attack.reset(); animTime = 0; }
+  });
+  toggle('slow', false, on => { speed = on ? 0.3 : 1; });
   toggle('pixel', true, on => {
     pixelOn = on;
     pixelRange.disabled = !on;
@@ -303,7 +316,13 @@
   new ResizeObserver(resize).observe(stage);
   resize();
 
+  const clock = new THREE.Clock();
   renderer.setAnimationLoop(() => {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    if (playing) {
+      animTime += dt * speed;
+      attack.pose(animTime, dt * speed);
+    }
     controls.update();
     renderer.setRenderTarget(lowRes);
     renderer.clear();

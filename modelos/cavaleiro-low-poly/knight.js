@@ -207,6 +207,7 @@ export function buildKnight(THREE, options = {}) {
     mesh(name, new THREE.SphereGeometry(r, 10, 7), 'malha', parent, pos, [0, 0, 0], scale);
 
   // ---------- Pernas (peso na perna esquerda, direita relaxada) ----------
+  const legs = {};
   const legPose = {
     1: { hip: [0, 0, 0.03], knee: [0.02, 0, 0], yaw: 0.16 },
     [-1]: { hip: [-0.1, 0, -0.05], knee: [0.17, 0, 0], yaw: -0.2 },
@@ -266,6 +267,7 @@ export function buildKnight(THREE, options = {}) {
     const ankle = knee.localToWorld(new THREE.Vector3(0, -0.4, 0));
     const foot = group(`Pe${L}`, knight, [ankle.x, 0.024, ankle.z]);
     foot.rotation.set(Math.PI / 2, pose.yaw, 0, 'YXZ');
+    legs[side] = { hip, knee, foot, ankleY: ankle.y, thigh: 0.42, shin: 0.4 };
     const sab = [
       { y: -0.065, w: 0.04, f: 0.024, b: 0.05 },
       { y: -0.01, w: 0.046, f: 0.024, b: 0.085 },
@@ -379,7 +381,7 @@ export function buildKnight(THREE, options = {}) {
     { y: 1.6, w: 0.047, f: 0.045, b: 0.048 },
   ], 10), 'pele', knight, [0, 0, -0.008]);
   const head = group('Cabeca', knight, [0, 1.683, 0.004]);
-  mesh('Cabeca', headShell(THREE, 1, () => true, 18, 14), 'pele', head);
+  mesh('Cranio', headShell(THREE, 1, () => true, 18, 14), 'pele', head);
   mesh('Cabelo', headShell(THREE, 1.07, (x, y, z) => y > (z > 0 ? -0.08 + 0.62 * z : -0.08 + 0.5 * z) && !(Math.abs(x) > 0.8 && y < 0.25 && z > -0.3), 18, 14), 'cabelo', head);
   for (const side of [1, -1]) {
     const S = side === 1 ? 'Esquerdo' : 'Direito';
@@ -631,6 +633,34 @@ export function buildKnight(THREE, options = {}) {
     mesh('ElosCorrente', new THREE.TorusGeometry(0.008, 0.0025, 3, 6), 'latao', knight,
       [x, 1.452 - 0.012 * Math.cos((x / 0.15) * (Math.PI / 2)), 0.108 - 0.045 * (x / 0.135) ** 2], [0, i % 2 ? Math.PI / 2 : 0, 0], [1, 1, 1], detail);
   }
+
+  // ---------- Rig: bacia e tronco ----------
+  // Separa a parte de baixo (bacia, pernas, faldas, cinto, bainha) da de cima
+  // (couraça, braços, cabeça, broches), para o tronco girar sobre a cintura.
+  // Os pés ficam na raiz (presos ao chão pela animação) e a capa também, pois
+  // ela é deformada para acompanhar o tronco com atraso.
+  const bacia = group('Bacia', knight, [0, 0.93, 0]);
+  const tronco = group('Tronco', bacia, [0, 0.09, -0.01]);
+  knight.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  const center = new THREE.Vector3();
+  for (const child of [...knight.children]) {
+    if (child === bacia || /^Pe(Esquerda|Direita)$/.test(child.name) || /^Capa/.test(child.name)) continue;
+    if (/^(Broche|ElosCorrente|BordaCouraca|Couraca|Gorjal|BordaGorjal|Cruz|Besagew|Pescoco|Cabeca|Ombro)/.test(child.name)) { tronco.attach(child); continue; }
+    if (/^(Quadril|Bainha|Pelve|SaiaMalha|Falda|Escarcela|Cinto)/.test(child.name)) { bacia.attach(child); continue; }
+    box.setFromObject(child).getCenter(center);
+    (center.y < 1.0 ? bacia : tronco).attach(child);
+  }
+  // Referências para a animação (fora do userData, que vai para o glTF).
+  Object.defineProperty(knight, 'rig', {
+    enumerable: false,
+    value: {
+      bacia, tronco, cabeca: head, legs,
+      arms: { 1: left, [-1]: right },
+      espada: sword,
+      upperArm: 0.3, forearm: 0.25,
+    },
+  });
 
   return knight;
 }

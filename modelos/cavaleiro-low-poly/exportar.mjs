@@ -1,9 +1,11 @@
-// Gera cavaleiro.glb, cavaleiro_contorno.glb e cavaleiro.obj/.mtl a partir de knight.js.
+// Gera cavaleiro.glb, cavaleiro_contorno.glb (ambos com a animação "Ataque")
+// e cavaleiro.obj/.mtl (pose parada) a partir de knight.js e ataque.js.
 // Uso: npm install three@0.160.0 && node exportar.mjs
 import fs from 'node:fs';
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { buildKnight, addOutline, PALETTE } from './knight.js';
+import { createAttack } from './ataque.js';
 
 // O GLTFExporter usa FileReader, que não existe no Node.
 globalThis.FileReader ??= class {
@@ -20,26 +22,46 @@ globalThis.FileReader ??= class {
 function flatten(root) {
   root.traverse(o => {
     if (!o.isMesh) return;
-    const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry;
+    const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
     g.deleteAttribute('uv');
+    // O glTF não tem material só de "lado de trás" (forro da capa): inverte as faces.
+    if (o.material.side === THREE.BackSide) {
+      const p = g.attributes.position;
+      for (let i = 0; i < p.count; i += 3) {
+        const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+        p.setXYZ(i, p.getX(i + 2), p.getY(i + 2), p.getZ(i + 2));
+        p.setXYZ(i + 2, x, y, z);
+      }
+      o.material.side = THREE.FrontSide;
+    }
     g.computeVertexNormals();
     o.geometry = g;
   });
   return root;
 }
 
-const knight = flatten(buildKnight(THREE));
+// No arquivo a capa vai presa ao tronco (sem a deformação com atraso do visualizador).
+function withAttack(root) {
+  for (const o of [...root.children]) if (/^Capa/.test(o.name)) root.rig.tronco.attach(o);
+  const clip = createAttack(THREE, root, { deformCape: false }).bake(30);
+  return clip;
+}
+
+const knight = buildKnight(THREE);
+const clip = withAttack(knight);
+flatten(knight);
 knight.updateMatrixWorld(true);
 
-const glb = await new GLTFExporter().parseAsync(knight, { binary: true });
+const glb = await new GLTFExporter().parseAsync(knight, { binary: true, animations: [clip] });
 fs.writeFileSync('cavaleiro.glb', Buffer.from(glb));
 
 // Versão com o contorno de desenho (casco invertido) embutido na malha.
 const outlined = buildKnight(THREE);
 addOutline(THREE, outlined, 0.012);
+const clipOutline = withAttack(outlined);
 flatten(outlined);
 outlined.updateMatrixWorld(true);
-const glbOutline = await new GLTFExporter().parseAsync(outlined, { binary: true });
+const glbOutline = await new GLTFExporter().parseAsync(outlined, { binary: true, animations: [clipOutline] });
 fs.writeFileSync('cavaleiro_contorno.glb', Buffer.from(glbOutline));
 
 // OBJ com normais chapadas e um material por cor.
