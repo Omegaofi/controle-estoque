@@ -198,16 +198,6 @@
     ataque: createAnimation(THREE, knight, ATAQUE),
   };
   let anim = clips.caminhada;
-  // Caminhada: o ciclo é feito no lugar; aqui a raiz anda em círculo pelo chão
-  // na velocidade do clipe, então os pés ficam parados no solo enquanto apoiam.
-  const WALK_RADIUS = 0.75;
-  let walkAngle = 0;
-  function placeRoot(dt) {
-    if (!anim.rootSpeed) { knight.position.set(0, 0, 0); knight.rotation.set(0, 0, 0); return; }
-    walkAngle += (anim.rootSpeed * dt) / WALK_RADIUS;
-    knight.position.set(WALK_RADIUS * Math.sin(walkAngle), 0, WALK_RADIUS * Math.cos(walkAngle));
-    knight.rotation.set(0, walkAngle + Math.PI / 2, 0);
-  }
   let playing = true, speed = 1, animTime = 0;
   scene.add(knight);
 
@@ -299,8 +289,6 @@
     anim.reset();
     animTime = 0;
     anim = clips[key];
-    walkAngle = 0;
-    if (same) { knight.position.set(0, 0, 0); knight.rotation.set(0, 0, 0); }
     playing = !same;
     for (const [k, b] of Object.entries(clipButtons)) b.setAttribute('aria-pressed', String(playing && k === key));
   }
@@ -353,7 +341,6 @@
     const dt = Math.min(clock.getDelta(), 0.05);
     if (playing) {
       animTime += dt * speed;
-      placeRoot(dt * speed);
       anim.pose(animTime, dt * speed);
     }
     controls.update();

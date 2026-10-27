@@ -41,8 +41,9 @@ ciclo com o pé no chão; o quadril desce logo após o contato, sobe na passagem
 vai para o lado do pé de apoio; quadril e tronco giram pouco e em sentidos
 opostos; escudo carregado à frente na altura da cintura e espada baixa com
 balanço curto e atrasado; a capa segue o tronco com atraso. O ciclo é feito no
-lugar (os pés deslizam para trás no apoio); no visualizador a raiz anda em
-círculo a 0,81 m/s, então os pés ficam parados no chão enquanto apoiam.
+lugar (os pés deslizam para trás no apoio), e o visualizador o mostra assim,
+sem deslocar o personagem; numa engine, mover a raiz a 0,81 m/s deixa os pés
+parados no chão enquanto apoiam.
 
 **Animação de ataque** (`animacoes.js`, 2,4 s em loop): corte horizontal de
 direita com a espada, que varre da direita para a esquerda do cavaleiro (na
