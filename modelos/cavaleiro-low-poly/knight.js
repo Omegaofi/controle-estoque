@@ -781,9 +781,9 @@ export function buildKnight(THREE, options = {}) {
   // Lado da espada: -1 = mão direita. O escudo fica no outro braço.
   const SWORD = -1, SHIELD = -SWORD;
   // Braço da espada caído ao lado; braço do escudo com o antebraço à frente.
-  // Braço da espada flexionado: antebraço à frente e para baixo, mão à frente
-  // do quadril, para a lâmina apontar para a frente longe do corpo.
-  const swordPose = options.swordPose ?? { shoulder: [-0.1, 0, 0.12], elbow: -0.9 };
+  // Braço da espada esticado, levemente à frente e para fora do corpo, para a
+  // lâmina apontar para a frente longe do corpo.
+  const swordPose = options.swordPose ?? { shoulder: [-0.3, 0, 0.15], elbow: -0.12 };
   const swordArm = arm(SWORD, [swordPose.shoulder[0], swordPose.shoulder[1], swordPose.shoulder[2] * SWORD], [swordPose.elbow, 0, 0], [0, 0, 0]);
   const shieldArm = arm(SHIELD, [-0.32, 0, 0.16 * SHIELD], [-1.12, 0, 0], [0, 0, 0]);
   const left = SWORD === 1 ? swordArm : shieldArm;
@@ -885,12 +885,12 @@ export function buildKnight(THREE, options = {}) {
   sword.position.copy(gripInFist).applyQuaternion(fistQ).add(swordArm.fist.position);
   sword.quaternion.copy(fistQ).multiply(new THREE.Quaternion().setFromRotationMatrix(gripAxes));
   swordArm.hand.add(sword);
-  // Pose parada: a lâmina aponta para a frente, um pouco para fora e para cima,
-  // como na guarda baixa (mão à frente do quadril, ponta para o oponente). O pulso faz a menor rotação a partir da posição neutra da mão para
+  // Pose parada: a lâmina aponta para a frente, na horizontal e um pouco para
+  // fora. O pulso faz a menor rotação a partir da posição neutra da mão para
   // levar a lâmina até lá; o giro em torno do braço fica com o antebraço.
   knight.updateMatrixWorld(true);
   const bladeNow = new THREE.Vector3(0, -1, 0).transformDirection(sword.matrixWorld);
-  const aim = new THREE.Vector3(...(options.swordAim ?? [0.1 * SWORD, 0.35, 1])).normalize();
+  const aim = new THREE.Vector3(...(options.swordAim ?? [0.12 * SWORD, 0, 1])).normalize();
   const handWorld = swordArm.hand.getWorldQuaternion(new THREE.Quaternion());
   const tilt = new THREE.Quaternion().setFromUnitVectors(bladeNow, aim);
   const elbowWorld = swordArm.elbow.getWorldQuaternion(new THREE.Quaternion());

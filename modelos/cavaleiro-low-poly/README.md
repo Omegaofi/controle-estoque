@@ -36,10 +36,9 @@ lado esquerdo e topete na frente.
   Pegada: o cabo passa por dentro dos dedos fechados, a guarda encosta logo
   depois do indicador (lado do polegar), o gume fica alinhado com os nós dos
   dedos e o resto do cabo e o pomo saem pelo lado do mindinho. Parado e
-  andando, o braço da espada fica flexionado (cotovelo dobrado cerca de 50°),
-  com a mão à frente do quadril e a lâmina apontando para a frente, um pouco
-  acima da horizontal, como na guarda baixa; o pulso inclina cerca de 38° a
-  partir da posição neutra. Nas animações, o giro em torno do
+  andando, o braço da espada fica esticado, um pouco à frente e para fora do
+  corpo, com a lâmina apontando para a frente na horizontal; o pulso inclina
+  cerca de 22° a partir da posição neutra. Nas animações, o giro em torno do
   eixo do braço é feito pelo antebraço (como na pronação), e a espada pode
   girar até 60° em torno da lâmina quando isso poupa o pulso.
 

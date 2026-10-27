@@ -145,7 +145,7 @@ export const DEFESA = {
 // rootSpeed m/s, então no chão cada pé fica parado enquanto apoia.
 // - 60% do ciclo com o pé no chão e 40% no ar; passo de cerca de 0,48 m, um
 //   pouco mais curto que o normal por causa do peso nas pernas.
-// - A espada vai à frente, com o braço flexionado e a mão à frente do quadril;
+// - A espada vai à frente, com o braço esticado um pouco à frente do corpo;
 //   a mão mantém a pegada da pose parada e a espada acompanha o braço.
 // - O quadril desce logo depois do contato (o peso "assenta"), sobe na
 //   passagem da outra perna e vai para o lado do pé de apoio.
@@ -178,7 +178,7 @@ export const CAMINHADA = {
     baciaYaw: walkKeys(u => [-0.08 * Math.cos(TAU * u)]),
     tronco: walkKeys(u => [0.11 * Math.cos(TAU * (u - 0.03)), 0.05 + 0.01 * Math.cos(2 * TAU * (u - 0.1)), 0.015 * Math.sin(TAU * u)]),
     cabeca: walkKeys(() => [0.02, 0]),
-    maoEspada: walkKeys(u => [0.26, -0.01 + 0.006 * Math.cos(2 * TAU * (u - 0.1)), 0.24 - 0.025 * Math.cos(TAU * (u - 0.07))]),
+    maoEspada: walkKeys(u => [0.29, -0.095 + 0.006 * Math.cos(2 * TAU * (u - 0.1)), 0.18 - 0.03 * Math.cos(TAU * (u - 0.07))]),
     maoEscudo: walkKeys(u => [-0.2, 0.06 + 0.006 * Math.cos(2 * TAU * (u - 0.12)), 0.27 + 0.012 * Math.cos(TAU * (u - 0.1))]),
     peEspada: walkKeys(footAt(0, 0.13, 0.08), 48),
     peEscudo: walkKeys(footAt(0.5, -0.13, -0.08), 48),
