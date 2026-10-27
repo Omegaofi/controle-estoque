@@ -85,10 +85,11 @@
   <aside>
     <div>
       <h1>Cavaleiro Low Poly</h1>
-      <p class="lede">Proporções realistas, sem elmo e sem rosto (só os olhos), capa verde com bordado, espada longa na mão direita e escudo no braço esquerdo. Cores sóbrias com textura simples. Corte horizontal com o corpo todo. Pixel art com sombreamento de desenho em 3 tons e contorno escuro.</p>
+      <p class="lede">Proporções realistas, sem elmo e sem rosto (só os olhos), capa verde com bordado, espada longa na mão direita e escudo no braço esquerdo. Cores sóbrias com textura simples. Ataque com corte horizontal e defesa com escudo, usando o corpo todo. Pixel art com sombreamento de desenho em 3 tons e contorno escuro.</p>
     </div>
     <div class="controls">
-      <button id="attack" type="button" aria-pressed="true">Ataque</button>
+      <button id="clip-ataque" type="button" aria-pressed="true">Ataque</button>
+      <button id="clip-defesa" type="button" aria-pressed="false">Defesa</button>
       <button id="slow" type="button" aria-pressed="false">Câmera lenta</button>
       <button id="spin" type="button" aria-pressed="false">Girar sozinho</button>
       <button id="pixel" type="button" aria-pressed="true">Pixel art</button>
@@ -108,7 +109,7 @@
         <dt>Peças</dt><dd id="parts">–</dd>
         <dt>Materiais</dt><dd id="mats">–</dd>
         <dt>Altura</dt><dd id="height">–</dd>
-        <dt>Animação</dt><dd>Ataque · 2,4 s</dd>
+        <dt>Animações</dt><dd>Ataque 2,4 s · Defesa 3 s</dd>
       </dl>
     </section>
     <section>
@@ -137,7 +138,7 @@
   import * as THREE from 'three';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
   import { buildKnight, addOutline, toonRamp, PALETTE } from './knight.js';
-  import { createAttack } from './ataque.js';
+  import { createAnimation, ATAQUE, DEFESA } from './animacoes.js';
 
   const LABELS = {
     pele: 'Pele', cabelo: 'Cabelo e barba', aco: 'Aço', acoEscuro: 'Aço escurecido',
@@ -190,7 +191,8 @@
     tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
   });
   const outlineMat = addOutline(THREE, knight, 0.012);
-  const attack = createAttack(THREE, knight);
+  const clips = { ataque: createAnimation(THREE, knight, ATAQUE), defesa: createAnimation(THREE, knight, DEFESA) };
+  let anim = clips.ataque;
   let playing = true, speed = 1, animTime = 0;
   scene.add(knight);
 
@@ -270,10 +272,18 @@
     });
   }
   toggle('spin', controls.autoRotate, on => { controls.autoRotate = on; });
-  toggle('attack', playing, on => {
-    playing = on;
-    if (!on) { attack.reset(); animTime = 0; }
-  });
+  // Ataque e Defesa: escolhe o clipe; clicar no que está tocando para e volta à pose parada.
+  const clipButtons = { ataque: document.getElementById('clip-ataque'), defesa: document.getElementById('clip-defesa') };
+  function selectClip(key) {
+    const same = playing && anim === clips[key];
+    anim.reset();
+    animTime = 0;
+    anim = clips[key];
+    playing = !same;
+    for (const [k, b] of Object.entries(clipButtons)) b.setAttribute('aria-pressed', String(playing && k === key));
+  }
+  for (const [k, b] of Object.entries(clipButtons)) b.addEventListener('click', () => selectClip(k));
+  if (!playing) clipButtons.ataque.setAttribute('aria-pressed', 'false');
   toggle('slow', false, on => { speed = on ? 0.3 : 1; });
   toggle('pixel', true, on => {
     pixelOn = on;
@@ -321,7 +331,7 @@
     const dt = Math.min(clock.getDelta(), 0.05);
     if (playing) {
       animTime += dt * speed;
-      attack.pose(animTime, dt * speed);
+      anim.pose(animTime, dt * speed);
     }
     controls.update();
     renderer.setRenderTarget(lowRes);

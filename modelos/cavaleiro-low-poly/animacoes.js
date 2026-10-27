@@ -1,9 +1,5 @@
-// Animação de ataque: corte horizontal de direita (golpe de frente, com a mão
-// da espada), varrendo do lado da espada para o lado do escudo. Com a espada
-// na mão direita, a lâmina vai da direita para a esquerda do cavaleiro. O golpe
-// nasce no quadril: a bacia e o tronco giram, o pé do lado do escudo dá um
-// passo à frente, a cabeça mantém o olhar no alvo, o escudo abre caminho e a
-// capa segue o tronco com atraso.
+// Animações do cavaleiro: ataque (corte horizontal) e defesa (bloqueio com
+// escudo seguido de contra-ataque em estocada). Um único motor toca os clipes.
 //
 // Pernas e braços usam cinemática inversa de dois ossos: a animação define
 // onde ficam os pés e as mãos, e os ângulos de quadril/joelho e ombro/cotovelo
@@ -19,39 +15,117 @@
 // já está girado, os valores locais mudam pouco: quem leva a espada é o giro.
 // Lâmina: direção da ponta no espaço do tronco.
 // Pés: [x, z, altura, giro] no chão.
-const DURATION = 2.4;
-const CHANNELS = {
-  baciaPos: [
-    [0, 0.01, -0.04, 0], [0.42, 0.03, -0.05, -0.03], [0.55, 0.02, -0.07, 0.02], [0.63, 0, -0.09, 0.07],
-    [0.71, -0.01, -0.09, 0.09], [0.86, -0.02, -0.08, 0.09], [1.1, -0.02, -0.07, 0.08], [1.75, 0.01, -0.04, 0], [2.4, 0.01, -0.04, 0],
-  ],
-  baciaYaw: [
-    [0, 0.15], [0.42, 0.4], [0.55, 0.2], [0.63, -0.1], [0.71, -0.3], [0.86, -0.38], [1.1, -0.34], [1.75, 0.15], [2.4, 0.15],
-  ],
-  tronco: [
-    [0, 0.1, 0.05, 0], [0.42, 0.75, -0.03, 0.05], [0.55, 0.45, 0.03, 0.02], [0.63, 0, 0.08, 0],
-    [0.71, -0.5, 0.1, -0.03], [0.86, -0.8, 0.1, -0.05], [1.1, -0.72, 0.08, -0.04], [1.75, 0.1, 0.05, 0], [2.4, 0.1, 0.05, 0],
-  ],
-  maoEspada: [
-    [0, 0.2, 0.08, 0.3], [0.42, 0.38, 0.16, -0.01], [0.55, 0.27, 0.14, 0.39], [0.63, 0.2, 0.13, 0.48],
-    [0.71, 0.13, 0.11, 0.47], [0.86, -0.11, 0.03, 0.39], [1.1, -0.13, 0.02, 0.33], [1.75, 0.2, 0.08, 0.3], [2.4, 0.2, 0.08, 0.3],
-  ],
-  lamina: [
-    [0, 0.05, 0.6, 0.8], [0.42, 0.99, 0.1, -0.06], [0.55, 0.58, 0.02, 0.81], [0.63, 0.25, -0.02, 0.98],
-    [0.71, -0.23, -0.05, 0.96], [0.86, -0.92, -0.25, 0.27], [1.1, -0.82, -0.35, 0.23], [1.75, 0.05, 0.6, 0.8], [2.4, 0.05, 0.6, 0.8],
-  ],
-  maoEscudo: [
-    [0, -0.17, 0.12, 0.3], [0.42, -0.12, 0.12, 0.32], [0.55, -0.25, 0.1, 0.2], [0.63, -0.33, 0.1, 0.05],
-    [0.71, -0.36, 0.08, -0.02], [0.86, -0.34, 0.1, 0], [1.1, -0.3, 0.1, 0.05], [1.75, -0.17, 0.12, 0.3], [2.4, -0.17, 0.12, 0.3],
-  ],
-  peEspada: [
-    [0, 0.17, -0.07, 0, 0.4], [0.71, 0.17, -0.07, 0, 0.4], [0.86, 0.17, -0.07, 0, 0.1], [1.1, 0.17, -0.07, 0, 0.1],
-    [1.75, 0.17, -0.07, 0, 0.4], [2.4, 0.17, -0.07, 0, 0.4],
-  ],
-  peEscudo: [
-    [0, -0.13, 0.12, 0, -0.05], [0.4, -0.13, 0.12, 0, -0.05], [0.5, -0.14, 0.19, 0.055, -0.1], [0.6, -0.15, 0.26, 0, -0.15],
-    [1.3, -0.15, 0.26, 0, -0.15], [1.45, -0.14, 0.19, 0.045, -0.1], [1.6, -0.13, 0.12, 0, -0.05], [2.4, -0.13, 0.12, 0, -0.05],
-  ],
+// Opcionais: poloEspada / poloEscudo (para onde aponta o cotovelo, no espaço do
+// tronco) e cabeca ([inclinação, giro] somados à compensação automática).
+// Ataque: corte horizontal de direita (golpe de frente, com a mão da espada),
+// varrendo do lado da espada para o lado do escudo. O golpe nasce no quadril:
+// a bacia e o tronco giram, o pé do lado do escudo dá um passo à frente, a
+// cabeça mantém o olhar no alvo, o escudo abre caminho e a capa segue o tronco
+// com atraso.
+export const ATAQUE = {
+  name: 'Ataque',
+  duration: 2.4,
+  channels: {
+    baciaPos: [
+      [0, 0.01, -0.04, 0], [0.42, 0.03, -0.05, -0.03], [0.55, 0.02, -0.07, 0.02], [0.63, 0, -0.09, 0.07],
+      [0.71, -0.01, -0.09, 0.09], [0.86, -0.02, -0.08, 0.09], [1.1, -0.02, -0.07, 0.08], [1.75, 0.01, -0.04, 0], [2.4, 0.01, -0.04, 0],
+    ],
+    baciaYaw: [
+      [0, 0.15], [0.42, 0.4], [0.55, 0.2], [0.63, -0.1], [0.71, -0.3], [0.86, -0.38], [1.1, -0.34], [1.75, 0.15], [2.4, 0.15],
+    ],
+    tronco: [
+      [0, 0.1, 0.05, 0], [0.42, 0.75, -0.03, 0.05], [0.55, 0.45, 0.03, 0.02], [0.63, 0, 0.08, 0],
+      [0.71, -0.5, 0.1, -0.03], [0.86, -0.8, 0.1, -0.05], [1.1, -0.72, 0.08, -0.04], [1.75, 0.1, 0.05, 0], [2.4, 0.1, 0.05, 0],
+    ],
+    maoEspada: [
+      [0, 0.2, 0.08, 0.3], [0.42, 0.38, 0.16, -0.01], [0.55, 0.27, 0.14, 0.39], [0.63, 0.2, 0.13, 0.48],
+      [0.71, 0.13, 0.11, 0.47], [0.86, -0.11, 0.03, 0.39], [1.1, -0.13, 0.02, 0.33], [1.75, 0.2, 0.08, 0.3], [2.4, 0.2, 0.08, 0.3],
+    ],
+    lamina: [
+      [0, 0.05, 0.6, 0.8], [0.42, 0.99, 0.1, -0.06], [0.55, 0.58, 0.02, 0.81], [0.63, 0.25, -0.02, 0.98],
+      [0.71, -0.23, -0.05, 0.96], [0.86, -0.92, -0.25, 0.27], [1.1, -0.82, -0.35, 0.23], [1.75, 0.05, 0.6, 0.8], [2.4, 0.05, 0.6, 0.8],
+    ],
+    maoEscudo: [
+      [0, -0.17, 0.12, 0.3], [0.42, -0.12, 0.12, 0.32], [0.55, -0.25, 0.1, 0.2], [0.63, -0.33, 0.1, 0.05],
+      [0.71, -0.36, 0.08, -0.02], [0.86, -0.34, 0.1, 0], [1.1, -0.3, 0.1, 0.05], [1.75, -0.17, 0.12, 0.3], [2.4, -0.17, 0.12, 0.3],
+    ],
+    peEspada: [
+      [0, 0.17, -0.07, 0, 0.4], [0.71, 0.17, -0.07, 0, 0.4], [0.86, 0.17, -0.07, 0, 0.1], [1.1, 0.17, -0.07, 0, 0.1],
+      [1.75, 0.17, -0.07, 0, 0.4], [2.4, 0.17, -0.07, 0, 0.4],
+    ],
+    peEscudo: [
+      [0, -0.13, 0.12, 0, -0.05], [0.4, -0.13, 0.12, 0, -0.05], [0.5, -0.14, 0.19, 0.055, -0.1], [0.6, -0.15, 0.26, 0, -0.15],
+      [1.3, -0.15, 0.26, 0, -0.15], [1.45, -0.14, 0.19, 0.045, -0.1], [1.6, -0.13, 0.12, 0, -0.05], [2.4, -0.13, 0.12, 0, -0.05],
+    ],
+  },
+};
+
+// Defesa: bloqueio com escudo seguido de contra-ataque, a partir de referências
+// do movimento real e de jogos:
+// - Base baixa e firme, pé do lado do escudo à frente, joelhos dobrados.
+// - Escudo um pouco afastado do corpo (não colado), borda de cima na altura
+//   do queixo, inclinado para cobrir também a mão da espada; o cavaleiro olha
+//   por cima da borda.
+// - O escudo vai ao encontro do golpe pouco antes do impacto (defesa ativa) e
+//   gira para desviar a lâmina para o lado, em vez de só aparar de frente.
+// - No impacto: pequena pausa, o braço do escudo cede, o tronco recua e os
+//   joelhos absorvem; a recuperação é mais lenta, para dar peso.
+// - A espada fica armada acima do escudo, ponta para a frente, e responde com
+//   uma estocada curta enquanto o escudo afasta a arma do oponente (contra-
+//   ataque logo após o bloqueio, como o "guard counter" dos jogos).
+// - Depois segura a guarda com uma respiração leve, que é a pose que mais fica
+//   na tela, e baixa o escudo de volta à guarda inicial.
+export const DEFESA = {
+  name: 'Defesa',
+  duration: 3.0,
+  channels: {
+    baciaPos: [
+      [0, 0.01, -0.04, 0], [0.2, 0.0, -0.08, -0.01], [0.5, 0.0, -0.08, -0.01], [0.56, 0.0, -0.08, 0.01],
+      [0.6, 0.0, -0.1, -0.04], [0.64, 0.0, -0.1, -0.04], [0.9, 0.0, -0.085, -0.015], [1.02, -0.01, -0.09, 0.03],
+      [1.16, -0.01, -0.1, 0.09], [1.28, -0.01, -0.1, 0.09], [1.55, 0.0, -0.08, -0.01], [1.9, 0.0, -0.075, -0.01],
+      [2.25, 0.0, -0.08, -0.01], [2.75, 0.01, -0.04, 0], [3.0, 0.01, -0.04, 0],
+    ],
+    baciaYaw: [
+      [0, 0.15], [0.2, 0.22], [0.5, 0.22], [0.56, 0.24], [0.6, 0.3], [0.64, 0.3], [0.9, 0.22],
+      [1.02, 0.1], [1.16, -0.12], [1.28, -0.12], [1.55, 0.22], [2.25, 0.22], [2.75, 0.15], [3.0, 0.15],
+    ],
+    tronco: [
+      [0, 0.1, 0.05, 0], [0.2, 0.15, 0.1, 0], [0.5, 0.15, 0.1, 0], [0.56, 0.2, 0.12, 0],
+      [0.6, 0.3, -0.03, 0.02], [0.64, 0.3, -0.03, 0.02], [0.9, 0.15, 0.1, 0], [1.02, 0.05, 0.12, 0],
+      [1.16, -0.35, 0.14, -0.02], [1.28, -0.35, 0.14, -0.02], [1.55, 0.15, 0.1, 0], [1.9, 0.15, 0.085, 0],
+      [2.25, 0.15, 0.1, 0], [2.75, 0.1, 0.05, 0], [3.0, 0.1, 0.05, 0],
+    ],
+    cabeca: [
+      [0, 0, 0], [0.2, 0.05, 0], [0.56, 0.05, 0], [0.6, -0.08, -0.06], [0.64, -0.08, -0.06], [0.9, 0.05, 0],
+      [2.25, 0.05, 0], [2.75, 0, 0], [3.0, 0, 0],
+    ],
+    maoEspada: [
+      [0, 0.2, 0.08, 0.3], [0.2, 0.16, 0.5, 0.3], [0.5, 0.16, 0.5, 0.3], [0.64, 0.16, 0.48, 0.28],
+      [0.9, 0.16, 0.5, 0.3], [1.02, 0.17, 0.5, 0.26], [1.16, 0.06, 0.36, 0.62], [1.28, 0.06, 0.36, 0.62],
+      [1.55, 0.16, 0.5, 0.3], [2.25, 0.16, 0.5, 0.3], [2.75, 0.2, 0.08, 0.3], [3.0, 0.2, 0.08, 0.3],
+    ],
+    lamina: [
+      [0, 0.05, 0.6, 0.8], [0.2, -0.12, 0.04, 0.99], [0.5, -0.12, 0.04, 0.99], [0.9, -0.12, 0.04, 0.99],
+      [1.02, -0.15, 0.0, 0.99], [1.16, -0.05, -0.06, 1], [1.28, -0.05, -0.06, 1], [1.55, -0.12, 0.04, 0.99],
+      [2.25, -0.12, 0.04, 0.99], [2.75, 0.05, 0.6, 0.8], [3.0, 0.05, 0.6, 0.8],
+    ],
+    maoEscudo: [
+      [0, -0.17, 0.12, 0.3], [0.2, -0.02, 0.22, 0.38], [0.5, -0.02, 0.22, 0.38], [0.56, -0.01, 0.23, 0.44],
+      [0.6, -0.08, 0.21, 0.32], [0.64, -0.08, 0.21, 0.32], [0.9, -0.02, 0.22, 0.38], [1.02, -0.04, 0.2, 0.4],
+      [1.16, -0.2, 0.14, 0.34], [1.28, -0.2, 0.14, 0.34], [1.55, -0.02, 0.22, 0.38], [1.9, -0.02, 0.225, 0.38],
+      [2.25, -0.02, 0.22, 0.38], [2.75, -0.17, 0.12, 0.3], [3.0, -0.17, 0.12, 0.3],
+    ],
+    poloEspada: [[0, 0.35, -1, -0.25], [0.2, 0.7, -0.7, -0.1], [2.25, 0.7, -0.7, -0.1], [2.75, 0.35, -1, -0.25], [3.0, 0.35, -1, -0.25]],
+    poloEscudo: [[0, -0.35, -1, -0.3], [0.2, -0.7, -0.7, -0.2], [2.25, -0.7, -0.7, -0.2], [2.75, -0.35, -1, -0.3], [3.0, -0.35, -1, -0.3]],
+    peEspada: [
+      [0, 0.17, -0.07, 0, 0.4], [0.2, 0.18, -0.1, 0, 0.45], [2.25, 0.18, -0.1, 0, 0.45], [2.75, 0.17, -0.07, 0, 0.4], [3.0, 0.17, -0.07, 0, 0.4],
+    ],
+    peEscudo: [
+      [0, -0.13, 0.12, 0, -0.05], [0.2, -0.14, 0.14, 0, -0.05], [1.0, -0.14, 0.14, 0, -0.05], [1.08, -0.14, 0.2, 0.04, -0.08],
+      [1.16, -0.14, 0.25, 0, -0.1], [1.35, -0.14, 0.25, 0, -0.1], [1.45, -0.14, 0.2, 0.035, -0.08], [1.55, -0.14, 0.14, 0, -0.05],
+      [2.25, -0.14, 0.14, 0, -0.05], [2.75, -0.13, 0.12, 0, -0.05], [3.0, -0.13, 0.12, 0, -0.05],
+    ],
+  },
 };
 
 // Hermite cúbica com tangentes de Catmull-Rom para tempos não uniformes.
@@ -79,8 +153,9 @@ function sample(keys, t) {
   return out;
 }
 
-export function createAttack(THREE, knight, { deformCape = true } = {}) {
+export function createAnimation(THREE, knight, clip = ATAQUE, { deformCape = true } = {}) {
   const rig = knight.rig;
+  const CHANNELS = clip.channels, DURATION = clip.duration;
   const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
   const X = V(1, 0, 0);
 
@@ -179,7 +254,8 @@ export function createAttack(THREE, knight, { deformCape = true } = {}) {
     rig.bacia.rotation.set(0, byaw, 0);
     rig.tronco.rotation.set(tpitch, tyaw, troll, 'YXZ');
     // A cabeça compensa o giro para manter o olhar à frente.
-    rig.cabeca.rotation.set(-tpitch * 0.6, -(tyaw + byaw) * 0.8, 0, 'YXZ');
+    const [hp, hy] = CHANNELS.cabeca ? sample(CHANNELS.cabeca, t) : [0, 0];
+    rig.cabeca.rotation.set(-tpitch * 0.6 + hp, -(tyaw + byaw) * 0.8 + hy * M, 0, 'YXZ');
 
     // Pés no chão e pernas por IK.
     for (const side of [1, -1]) {
@@ -201,10 +277,12 @@ export function createAttack(THREE, knight, { deformCape = true } = {}) {
     const swordArm = rig.arms[M], shieldArm = rig.arms[-M];
     const [lx, ly, lz] = sample(CHANNELS.maoEspada, t);
     d.set(lx * M, ly, lz).sub(swordArm.shoulder.position);
-    twoBone(swordArm.shoulder, swordArm.elbow, rig.upperArm, rig.forearm, d, pole.set(0.35 * M, -1, -0.25), -1);
+    const [sp0, sp1, sp2] = CHANNELS.poloEspada ? sample(CHANNELS.poloEspada, t) : [0.35, -1, -0.25];
+    twoBone(swordArm.shoulder, swordArm.elbow, rig.upperArm, rig.forearm, d, pole.set(sp0 * M, sp1, sp2), -1);
     const [rx, ry, rz] = sample(CHANNELS.maoEscudo, t);
     d.set(rx * M, ry, rz).sub(shieldArm.shoulder.position);
-    twoBone(shieldArm.shoulder, shieldArm.elbow, rig.upperArm, rig.forearm, d, pole.set(-0.35 * M, -1, -0.3), -1);
+    const [ep0, ep1, ep2] = CHANNELS.poloEscudo ? sample(CHANNELS.poloEscudo, t) : [-0.35, -1, -0.3];
+    twoBone(shieldArm.shoulder, shieldArm.elbow, rig.upperArm, rig.forearm, d, pole.set(ep0 * M, ep1, ep2), -1);
 
     // Orientação da espada: ponta na direção da lâmina e guarda (eixo x local)
     // na vertical, alinhada com a mão; convertida para a rotação do pulso.
@@ -251,8 +329,11 @@ export function createAttack(THREE, knight, { deformCape = true } = {}) {
       out.push(new THREE.VectorKeyframeTrack(`${o.uuid}.position`, times, tracks[i].p));
       out.push(new THREE.QuaternionKeyframeTrack(`${o.uuid}.quaternion`, times, tracks[i].q));
     });
-    return new THREE.AnimationClip('Ataque', DURATION, out);
+    return new THREE.AnimationClip(clip.name, DURATION, out);
   }
 
-  return { duration: DURATION, pose, reset, bake };
+  return { name: clip.name, duration: DURATION, pose, reset, bake };
 }
+
+export const createAttack = (THREE, knight, opts) => createAnimation(THREE, knight, ATAQUE, opts);
+export const createDefense = (THREE, knight, opts) => createAnimation(THREE, knight, DEFESA, opts);

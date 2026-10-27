@@ -1,12 +1,12 @@
-// Gera cavaleiro.glb, cavaleiro_contorno.glb (ambos com a animação "Ataque")
-// e cavaleiro.obj/.mtl (pose parada) a partir de knight.js e ataque.js.
+// Gera cavaleiro.glb, cavaleiro_contorno.glb (ambos com as animações "Ataque"
+// e "Defesa") e cavaleiro.obj/.mtl (pose parada) a partir de knight.js e animacoes.js.
 // Uso: npm install three@0.160.0 && node exportar.mjs
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { buildKnight, addOutline, PALETTE } from './knight.js';
-import { createAttack } from './ataque.js';
+import { createAnimation, ATAQUE, DEFESA } from './animacoes.js';
 
 // O GLTFExporter usa FileReader, que não existe no Node.
 globalThis.FileReader ??= class {
@@ -85,27 +85,26 @@ function flatten(root) {
 }
 
 // No arquivo a capa vai presa ao tronco (sem a deformação com atraso do visualizador).
-function withAttack(root) {
+function withAnimations(root) {
   for (const o of [...root.children]) if (/^Capa/.test(o.name)) root.rig.tronco.attach(o);
-  const clip = createAttack(THREE, root, { deformCape: false }).bake(30);
-  return clip;
+  return [ATAQUE, DEFESA].map(c => createAnimation(THREE, root, c, { deformCape: false }).bake(30));
 }
 
 const knight = buildKnight(THREE);
-const clip = withAttack(knight);
+const clips = withAnimations(knight);
 flatten(knight);
 knight.updateMatrixWorld(true);
 
-const glb = await new GLTFExporter().parseAsync(knight, { binary: true, animations: [clip] });
+const glb = await new GLTFExporter().parseAsync(knight, { binary: true, animations: clips });
 fs.writeFileSync('cavaleiro.glb', Buffer.from(glb));
 
 // Versão com o contorno de desenho (casco invertido) embutido na malha.
 const outlined = buildKnight(THREE);
 addOutline(THREE, outlined, 0.012);
-const clipOutline = withAttack(outlined);
+const clipsOutline = withAnimations(outlined);
 flatten(outlined);
 outlined.updateMatrixWorld(true);
-const glbOutline = await new GLTFExporter().parseAsync(outlined, { binary: true, animations: [clipOutline] });
+const glbOutline = await new GLTFExporter().parseAsync(outlined, { binary: true, animations: clipsOutline });
 fs.writeFileSync('cavaleiro_contorno.glb', Buffer.from(glbOutline));
 
 // OBJ com normais chapadas e um material por cor.

@@ -17,7 +17,7 @@ espada longa na mão direita e escudo no braço esquerdo. Proporções humanas
   espada com sulco na lâmina, anéis no cabo e bainha presa ao cinto. A guarda
   da espada fica na vertical, alinhada com a mão, parada e durante o golpe.
 
-**Animação de ataque** (`ataque.js`, 2,4 s em loop): corte horizontal de
+**Animação de ataque** (`animacoes.js`, 2,4 s em loop): corte horizontal de
 direita com a espada, que varre da direita para a esquerda do cavaleiro (na
 tela, de quem olha de frente, vai da esquerda para a direita).
 O corpo todo participa: guarda, recuo com o tronco torcido (cerca de 65° entre
@@ -27,8 +27,22 @@ inversa de dois ossos, então os pés ficam no chão e as mãos seguem a trajet�
 A cabeça compensa o giro para manter o olhar no alvo, o escudo abre caminho
 para a lâmina e a capa acompanha o tronco com atraso.
 
-Os dois `.glb` trazem a animação gravada como clipe `Ataque` (30 quadros por
-segundo, 15 articulações). Nos arquivos a capa vai presa ao tronco, sem o
+**Animação de defesa** (`animacoes.js`, 3 s em loop), baseada em referências
+do movimento real com escudo e de jogos:
+
+- base baixa, pé do lado do escudo à frente e joelhos dobrados;
+- escudo afastado do corpo (não colado), borda na altura do queixo, levemente
+  inclinado para desviar, cobrindo também a mão da espada;
+- defesa ativa: o escudo vai ao encontro do golpe pouco antes do impacto e
+  gira para jogar a lâmina para o lado;
+- no impacto, uma pausa curta, o braço cede, o tronco recua, os joelhos
+  absorvem e a cabeça se encolhe; a recuperação é mais lenta, para dar peso;
+- espada armada acima do escudo com a ponta à frente, e contra-ataque em
+  estocada com passo à frente enquanto o escudo afasta a arma do oponente;
+- guarda sustentada com respiração leve e volta à pose inicial.
+
+Os dois `.glb` trazem as animações gravadas como clipes `Ataque` e `Defesa`
+(30 quadros por segundo, 15 articulações). Nos arquivos a capa vai presa ao tronco, sem o
 atraso do tecido que o visualizador simula.
 
 Cerca de 11.000 triângulos (237 peças), sombreamento chapado (flat) e paleta
@@ -45,11 +59,11 @@ pixel é ajustável (2 a 10 px).
 
 | Arquivo | Uso |
 | --- | --- |
-| `cavaleiro.glb` | Modelo com o clipe de animação `Ataque`, para Blender, Unity, Godot, Unreal ou three.js |
+| `cavaleiro.glb` | Modelo com os clipes de animação `Ataque` e `Defesa`, para Blender, Unity, Godot, Unreal ou three.js |
 | `cavaleiro_contorno.glb` | Mesmo modelo com o contorno embutido (malhas `*_Contorno`, material sem iluminação) |
 | `cavaleiro.obj` + `cavaleiro.mtl` | Mesmo modelo em OBJ (pose parada, sem animação), um material por cor |
 | `knight.js` | Gerador do modelo em three.js: `buildKnight` (cores em `PALETTE`, `{ toon: true }` para cel shading) e `addOutline` |
-| `ataque.js` | Animação de ataque: chaves da pose, IK de pernas e braços, capa com atraso e `bake()` para glTF |
+| `animacoes.js` | Clipes `ATAQUE` e `DEFESA` e o motor que os toca: chaves da pose, IK de pernas e braços, capa com atraso e `bake()` para glTF |
 | `index.html` | Visualizador 3D (abrir por um servidor local, ex. `npx serve .`) |
 | `exportar.mjs` | Regera os GLB e o OBJ: `npm install three@0.160.0 && node exportar.mjs` |
 
