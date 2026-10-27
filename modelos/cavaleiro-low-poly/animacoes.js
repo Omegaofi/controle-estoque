@@ -148,13 +148,14 @@ export const DEFESA = {
 // - A espada vai à frente, com o braço esticado um pouco à frente do corpo;
 //   a mão mantém a pegada da pose parada e a espada acompanha o braço.
 // - O quadril desce logo depois do contato (o peso "assenta"), sobe na
-//   passagem da outra perna e vai para o lado do pé de apoio.
+//   passagem da outra perna e vai de leve (cerca de 1 cm) para o lado do pé
+//   de apoio.
 // - O quadril gira pouco com a perna da frente e o tronco gira ao contrário,
 //   porque os braços quase não balançam: escudo carregado à frente, na altura
 //   da cintura, e espada à frente, com um balanço curto e atrasado.
 // - Peito, braços e lâmina chegam um pouco depois do quadril (atraso de
 //   alguns quadros), e a capa segue o tronco com atraso.
-// - Os ombros giram cerca de 9° contra o quadril e inclinam cerca de 3°: o
+// - Os ombros giram cerca de 9° contra o quadril e inclinam só cerca de 1°: o
 //   tronco é que leva o movimento, já que os braços estão ocupados.
 const WALK_T = 1.2, STANCE = 0.6, REACH = 0.29;
 const TAU = Math.PI * 2;
@@ -176,12 +177,13 @@ export const CAMINHADA = {
   loop: true,
   rootSpeed: (2 * REACH) / (STANCE * WALK_T),
   channels: {
-    baciaPos: walkKeys(u => [0.025 * Math.sin(TAU * u), -0.05 - 0.012 * Math.cos(2 * TAU * (u - 0.07)), 0]),
+    // Balanço lateral suave para o lado do pé de apoio (cerca de 1 cm).
+    baciaPos: walkKeys(u => [0.009 * Math.sin(TAU * (u - 0.04)), -0.05 - 0.012 * Math.cos(2 * TAU * (u - 0.07)), 0]),
     baciaYaw: walkKeys(u => [-0.11 * Math.cos(TAU * u)]),
     // Tronco: gira contra o quadril (os ombros vão para o lado oposto ao da
     // perna da frente), o ombro do lado da perna de apoio sobe e o peito balança
     // um pouco para a frente a cada passo; tudo chega um pouco depois do quadril.
-    tronco: walkKeys(u => [0.27 * Math.cos(TAU * (u - 0.04)), 0.06 + 0.02 * Math.cos(2 * TAU * (u - 0.12)), 0.055 * Math.sin(TAU * (u - 0.05))]),
+    tronco: walkKeys(u => [0.27 * Math.cos(TAU * (u - 0.04)), 0.06 + 0.02 * Math.cos(2 * TAU * (u - 0.12)), 0.018 * Math.sin(TAU * (u - 0.1))]),
     cabeca: walkKeys(() => [0.02, 0]),
     maoEspada: walkKeys(u => [0.29, -0.095 + 0.006 * Math.cos(2 * TAU * (u - 0.1)), 0.18 - 0.03 * Math.cos(TAU * (u - 0.07))]),
     maoEscudo: walkKeys(u => [-0.2, 0.06 + 0.008 * Math.cos(2 * TAU * (u - 0.12)), 0.27 + 0.02 * Math.cos(TAU * (u - 0.1))]),
