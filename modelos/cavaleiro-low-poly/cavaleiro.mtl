@@ -95,15 +95,15 @@ d 1
 illum 2
 
 newmtl olho
-Kd 0.1647 0.1373 0.1255
+Kd 0.1176 0.1020 0.0941
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
 d 1
 illum 2
 
-newmtl labio
-Kd 0.6039 0.3922 0.3216
+newmtl bordado
+Kd 0.7608 0.6039 0.2706
 Ka 0 0 0
 Ks 0.1 0.1 0.1
 Ns 10
