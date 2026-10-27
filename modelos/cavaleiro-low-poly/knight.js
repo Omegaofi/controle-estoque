@@ -7,7 +7,7 @@
 
 export const PALETTE = {
   pele: 0xae8a77,
-  cabelo: 0x2e2620,
+  cabelo: 0x4a3828,
   aco: 0x80868d,
   acoEscuro: 0x50555b,
   malha: 0x42464b,
@@ -104,7 +104,8 @@ function headPoint(nx, ny, nz, k = 1) {
 }
 
 // Recorta uma "casca" da esfera da cabeça (cabelo, barba) pelos triângulos
-// cujo centro passa no teste, e aplica o mesmo formato de crânio.
+// cujo centro passa no teste, e aplica o mesmo formato de crânio. k (escala da
+// casca) pode ser um número ou uma função da direção na esfera.
 function headShell(THREE, k, keep, wSeg = 16, hSeg = 12) {
   const src = new THREE.SphereGeometry(1, wSeg, hSeg).toNonIndexed();
   const p = src.attributes.position;
@@ -114,7 +115,10 @@ function headShell(THREE, k, keep, wSeg = 16, hSeg = 12) {
     const cy = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3;
     const cz = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
     if (!keep(cx, cy, cz)) continue;
-    for (let j = 0; j < 3; j++) out.push(...headPoint(p.getX(i + j), p.getY(i + j), p.getZ(i + j), k));
+    for (let j = 0; j < 3; j++) {
+      const x = p.getX(i + j), y = p.getY(i + j), z = p.getZ(i + j);
+      out.push(...headPoint(x, y, z, typeof k === 'function' ? k(x, y, z) : k));
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(out, 3));
@@ -519,9 +523,36 @@ export function buildKnight(THREE, options = {}) {
     { y: 1.5, w: 0.052, f: 0.05, b: 0.055 },
     { y: 1.6, w: 0.047, f: 0.045, b: 0.048 },
   ], 10), 'pele', knight, [0, 0, -0.008]);
-  const head = group('Cabeca', knight, [0, 1.683, 0.004]);
+  // Cabeça um pouco maior (10%), subindo para o queixo não entrar no gorjal.
+  const head = group('Cabeca', knight, [0, 1.694, 0.004]);
+  head.scale.setScalar(1.1);
   mesh('Cranio', headShell(THREE, 1, () => true, 18, 14), 'pele', head);
-  mesh('Cabelo', headShell(THREE, 1.07, (x, y, z) => y > (z > 0 ? -0.08 + 0.62 * z : -0.08 + 0.5 * z) && !(Math.abs(x) > 0.8 && y < 0.25 && z > -0.3), 18, 14), 'cabelo', head);
+  // Cabelo "old money": testa livre com a linha do cabelo alta e entradas
+  // leves nas têmporas; laterais e nuca curtas e afinadas; em cima o volume
+  // nasce da linha do cabelo e sobe penteado para trás, com risca do lado
+  // esquerdo e um leve topete na frente.
+  const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+  // Altura da linha do cabelo (na esfera unitária) conforme o ângulo em volta
+  // da cabeça: alta na testa, mais alta nas entradas, baixa nas orelhas e nuca.
+  const hairline = (x, z) => {
+    const a = Math.abs(Math.atan2(x, z));
+    if (a < 0.6) return 0.66 + 0.08 * smooth(0.25, 0.6, a);
+    if (a < 1.57) return 0.74 + (0.12 - 0.74) * smooth(0.6, 1.4, a);
+    return 0.12 + (-0.55 - 0.12) * smooth(1.57, 2.8, a);
+  };
+  const hairK = (x, y, z) => {
+    const above = y - hairline(x, z);
+    const grow = smooth(0.0, 0.3, above);                    // nasce rente à pele
+    const top = smooth(0.2, 0.75, y);                        // volume só em cima
+    const front = 0.75 + 0.35 * Math.max(0, z);              // mais cheio na frente
+    const crown = z < 0 ? 1 - 0.5 * smooth(0, -0.9, z) : 1;  // assenta na coroa
+    const part = Math.exp(-(((x - 0.4) / 0.07) ** 2)) * smooth(0.3, 0.55, y) * smooth(-0.5, 0.2, z);
+    const quiff = smooth(0.5, 0.85, y) * smooth(0.3, 0.8, z) * grow;
+    const side = 1 + 0.3 * smooth(0.4, -0.6, x);              // mais cheio do lado oposto à risca
+    return 1.022 + grow * (0.15 * top * front * crown * side + 0.07 * quiff) - 0.06 * part;
+  };
+  mesh('Cabelo', headShell(THREE, hairK, (x, y, z) =>
+    y > hairline(x, z) && !(Math.abs(x) > 0.78 && y < 0.22 && z > -0.3), 34, 26), 'cabelo', head);
   for (const side of [1, -1]) {
     const S = side === 1 ? 'Esquerdo' : 'Direito';
     mesh(`Olho${S}`, new THREE.SphereGeometry(1, 6, 4), 'olho', head, [0.03 * side, 0.016, 0.081], [0, 0.3 * side, 0], [0.011, 0.0075, 0.005], { noOutline: true });

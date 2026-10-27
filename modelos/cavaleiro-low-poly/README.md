@@ -3,6 +3,10 @@
 Cavaleiro low poly realista: sem elmo e sem rosto (só os olhos), com capa verde,
 espada longa na mão direita e escudo no braço esquerdo. Proporções humanas
 (1,80 m, cerca de 8 cabeças), em pose natural com o peso na perna esquerda.
+Cabeça 10% maior que a proporção anatômica, para ler melhor em pixel art, e
+cabelo castanho em corte "old money": testa livre, entradas leves, laterais e
+nuca curtas, volume em cima penteado para trás, risca do lado esquerdo e leve
+topete na frente.
 
 - **Conexões no corpo:** articulações de cota de malha em ombros, cotovelos,
   pulsos, quadris, joelhos e tornozelos; mangas e saia de malha por baixo das
